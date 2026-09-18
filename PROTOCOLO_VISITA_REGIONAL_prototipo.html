@@ -28,7 +28,7 @@
   .card{background:var(--blanco);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
   .card h2{font-size:.95rem;margin:0 0 12px;color:var(--bm-blue);font-weight:800}
   label{display:block;font-size:.8rem;font-weight:700;margin:10px 0 4px;color:var(--ink)}
-  input[type=text],input[type=date],select,textarea{
+  input[type=text],input[type=date],input[type=time],input[type=password],select,textarea{
     width:100%;border:1.5px solid var(--gris-borde);border-radius:8px;padding:9px 10px;
     font-size:.9rem;background:var(--blanco);color:var(--ink);font-family:inherit}
   textarea{min-height:70px;resize:vertical}
@@ -110,7 +110,7 @@
       <div class="row">
         <div>
           <label>Director Regional</label>
-          <input type="text" id="c-director" placeholder="Nombre del Director Regional">
+          <select id="c-director"></select>
         </div>
         <div>
           <label>Fecha visita</label>
@@ -135,7 +135,10 @@
       <label>Director de Tienda</label>
       <select id="c-directortienda"></select>
 
-      <button class="link-btn" style="margin-top:14px" onclick="abrirModalDirectores()">⚙️ Gestionar lista de Directores de Tienda</button>
+      <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
+        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectoresRegionales)">⚙️ Gestionar Directores Regionales</button>
+        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectores)">⚙️ Gestionar Directores de Tienda</button>
+      </div>
 
       <div style="margin-top:16px">
         <button class="btn" onclick="iniciarVisita()">Iniciar visita ▸</button>
@@ -296,7 +299,7 @@
 
 </main>
 
-<!-- ══ MODAL: gestionar Directores ══ -->
+<!-- ══ MODAL: gestionar Directores de Tienda ══ -->
 <div class="modal-back" id="modal-directores">
   <div class="modal">
     <h2 style="color:var(--bm-blue);margin-top:0">Directores de Tienda</h2>
@@ -307,6 +310,35 @@
     <div style="margin-top:12px;display:flex;gap:8px">
       <button class="btn" onclick="guardarDirectoresNuevos()">Añadir</button>
       <button class="btn btn-ghost" onclick="cerrarModalDirectores()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: gestionar Directores Regionales ══ -->
+<div class="modal-back" id="modal-directores-reg">
+  <div class="modal">
+    <h2 style="color:var(--bm-blue);margin-top:0">Directores Regionales</h2>
+    <p style="font-size:.8rem;color:#777">Lista actual (<span id="dirreg-count">0</span>):</p>
+    <div id="dirreg-lista" style="font-size:.82rem;max-height:140px;overflow:auto;margin-bottom:12px"></div>
+    <label>Añadir nombres (uno por línea)</label>
+    <textarea id="dirreg-nuevos" placeholder="Nombre Apellido&#10;Otro Director"></textarea>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" onclick="guardarDirectoresRegionalesNuevos()">Añadir</button>
+      <button class="btn btn-ghost" onclick="cerrarModalDirectoresRegionales()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: contraseña de administración (gestionar listas) ══ -->
+<div class="modal-back" id="modal-admin-pass">
+  <div class="modal" style="max-width:340px">
+    <h2 style="color:var(--bm-blue);margin-top:0">🔒 Acceso restringido</h2>
+    <p style="font-size:.82rem;color:#777;margin:0 0 12px">Introduce la contraseña para gestionar las listas de directores.</p>
+    <input type="password" id="admin-pass-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter') verificarAdminPass()">
+    <p class="setup-err" id="admin-pass-err" style="margin-top:8px">❌ Contraseña incorrecta</p>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" onclick="verificarAdminPass()">Entrar</button>
+      <button class="btn btn-ghost" onclick="cerrarModalAdminPass()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -345,6 +377,7 @@ const CUSTOMER_JOURNEY_PUNTOS = [
 let db=null, _ref,_onValue,_set,_push,_child;
 let visitaActualId=null;
 let directoresCache={};
+let directoresRegionalesCache={};
 
 function hoy(){ return new Date().toISOString().slice(0,10); }
 function showToast(msg,dur=2200){
@@ -422,6 +455,11 @@ async function iniciarFirebase(cfg){
     directoresCache = s.val()||{};
     poblarDirectores();
     renderListaDirectoresModal();
+  });
+  _onValue(ref('directoresRegionales'), s=>{
+    directoresRegionalesCache = s.val()||{};
+    poblarDirectoresRegionales();
+    renderListaDirectoresRegionalesModal();
   });
 
   comprobarVisitaPendiente();
@@ -679,6 +717,61 @@ window.guardarDirectoresNuevos=async()=>{
   }
   document.getElementById('dir-nuevos').value='';
   showToast(`${nombres.length} director(es) añadido(s)`);
+};
+
+// ══ DIRECTORES REGIONALES ══
+function poblarDirectoresRegionales(){
+  const sel=document.getElementById('c-director');
+  const valorPrevio = sel.value;
+  const nombres=Object.values(directoresRegionalesCache).map(d=>d.nombre).sort();
+  sel.innerHTML='<option value="">Selecciona</option>'+nombres.map(n=>`<option>${n}</option>`).join('');
+  if(valorPrevio) sel.value = valorPrevio;
+}
+window.abrirModalDirectoresRegionales=()=>{ document.getElementById('modal-directores-reg').classList.add('show'); };
+window.cerrarModalDirectoresRegionales=()=>{ document.getElementById('modal-directores-reg').classList.remove('show'); };
+function renderListaDirectoresRegionalesModal(){
+  const nombres=Object.values(directoresRegionalesCache).map(d=>d.nombre).sort();
+  document.getElementById('dirreg-count').textContent=nombres.length;
+  document.getElementById('dirreg-lista').innerHTML = nombres.map(n=>`<div>• ${n}</div>`).join('') || '<em>Sin directores todavía</em>';
+}
+window.guardarDirectoresRegionalesNuevos=async()=>{
+  const txt=document.getElementById('dirreg-nuevos').value.trim();
+  if(!txt) return;
+  const nombres=txt.split('\n').map(n=>n.trim()).filter(Boolean);
+  for(const nombre of nombres){
+    const nuevaRef=_push(ref('directoresRegionales'));
+    await _set(nuevaRef, {nombre});
+  }
+  document.getElementById('dirreg-nuevos').value='';
+  showToast(`${nombres.length} Director(es) Regional(es) añadido(s)`);
+};
+
+// ══ CONTRASEÑA DE ADMINISTRACIÓN (solo filtro de cliente, no seguridad real) ══
+const ADMIN_PASSWORD = 'retail';
+let adminAutenticado = false;
+let _accionPendienteAdmin = null;
+window.pedirPasswordAdmin = function(accion){
+  if(adminAutenticado){ accion(); return; }
+  _accionPendienteAdmin = accion;
+  document.getElementById('admin-pass-input').value='';
+  document.getElementById('admin-pass-err').style.display='none';
+  document.getElementById('modal-admin-pass').classList.add('show');
+};
+window.cerrarModalAdminPass = function(){
+  document.getElementById('modal-admin-pass').classList.remove('show');
+  _accionPendienteAdmin = null;
+};
+window.verificarAdminPass = function(){
+  const pass = document.getElementById('admin-pass-input').value;
+  if(pass === ADMIN_PASSWORD){
+    adminAutenticado = true;
+    document.getElementById('modal-admin-pass').classList.remove('show');
+    const accion = _accionPendienteAdmin;
+    _accionPendienteAdmin = null;
+    if(accion) accion();
+  } else {
+    document.getElementById('admin-pass-err').style.display='block';
+  }
 };
 
 // ══ PANTALLA 1 → 2 ══
