@@ -178,12 +178,10 @@
   <section id="pantalla-competencia" class="hidden">
     <div class="card">
       <h2>6. Competencia</h2>
-      <label style="margin-top:0">Competidor visitado</label>
-      <input type="text" id="comp-competidor" onblur="guardarCompetencia()">
-      <label>Observaciones</label>
-      <textarea id="comp-observaciones" onblur="guardarCompetencia()"></textarea>
-      <label>Acciones</label>
-      <textarea id="comp-acciones" onblur="guardarCompetencia()"></textarea>
+    </div>
+    <div id="competencia-lista"></div>
+    <div class="card" id="competencia-agregar-card">
+      <button class="btn btn-ghost" id="btn-agregar-competidor" onclick="agregarCompetidor()">+ Añadir otro competidor</button>
     </div>
     <div class="card">
       <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
@@ -532,14 +530,16 @@ function poblarEscala010(sel){
 const ESCALA_VALORACION = ['Muy malo','Malo','Normal','Bueno','Excelente'];
 
 // ══ BLOQUE GENÉRICO Sí/No + Plan de acción + Cuándo (reutilizable en Captación/Cartera/etc.) ══
+// it.siEsBueno=true -> "Sí" es la respuesta buena (verde) y "No" la mala (rojo, muestra Plan de acción).
+// Por defecto (sin siEsBueno) es al revés: "Sí" = problema (rojo), como en Customer Journey.
 function renderBloqueSiNo(items, containerId, pathBase){
   const cont=document.getElementById(containerId);
   cont.innerHTML = items.map(it=>`
     <div class="card">
       <h3 style="margin:0 0 10px;font-size:.9rem">${it.label}</h3>
       <div class="sino">
-        <button id="blq-${pathBase}-${it.key}-si" onclick="setBloqueSiNo('${pathBase}','${it.key}',true)">Sí</button>
-        <button id="blq-${pathBase}-${it.key}-no" onclick="setBloqueSiNo('${pathBase}','${it.key}',false)">No</button>
+        <button id="blq-${pathBase}-${it.key}-si" onclick="setBloqueSiNo('${pathBase}','${it.key}',true,${!!it.siEsBueno})">Sí</button>
+        <button id="blq-${pathBase}-${it.key}-no" onclick="setBloqueSiNo('${pathBase}','${it.key}',false,${!!it.siEsBueno})">No</button>
       </div>
       <div class="cj-extra" id="blq-${pathBase}-${it.key}-extra">
         <label>Plan de acción</label>
@@ -551,19 +551,28 @@ function renderBloqueSiNo(items, containerId, pathBase){
     </div>
   `).join('');
 }
-window.setBloqueSiNo = function(pathBase, key, valor){
-  document.getElementById(`blq-${pathBase}-${key}-si`).classList.toggle('sel-si', valor===true);
-  document.getElementById(`blq-${pathBase}-${key}-no`).classList.toggle('sel-no', valor===false);
-  document.getElementById(`blq-${pathBase}-${key}-extra`).classList.toggle('show', valor===true);
+window.setBloqueSiNo = function(pathBase, key, valor, siEsBueno){
+  const elSi = document.getElementById(`blq-${pathBase}-${key}-si`);
+  const elNo = document.getElementById(`blq-${pathBase}-${key}-no`);
+  elSi.classList.remove('sel-si','sel-no');
+  elNo.classList.remove('sel-si','sel-no');
+  if(valor===true) elSi.classList.add(siEsBueno ? 'sel-no' : 'sel-si');
+  if(valor===false) elNo.classList.add(siEsBueno ? 'sel-si' : 'sel-no');
+  elSi.dataset.valor = String(valor);
+  const esMalo = siEsBueno ? (valor===false) : (valor===true);
+  document.getElementById(`blq-${pathBase}-${key}-extra`).classList.toggle('show', esMalo);
   guardarBloqueSiNo(pathBase, key, valor);
 };
 window.guardarBloqueSiNo = async function(pathBase, key, valorForzado){
-  const si = valorForzado===true || document.getElementById(`blq-${pathBase}-${key}-si`).classList.contains('sel-si');
-  const no = valorForzado===false || document.getElementById(`blq-${pathBase}-${key}-no`).classList.contains('sel-no');
-  if(!si && !no) return;
+  let valor = valorForzado;
+  if(valor===undefined){
+    const raw = document.getElementById(`blq-${pathBase}-${key}-si`).dataset.valor;
+    if(raw===undefined) return;
+    valor = raw === 'true';
+  }
   const plan = document.getElementById(`blq-${pathBase}-${key}-plan`).value;
   const fecha = document.getElementById(`blq-${pathBase}-${key}-fecha`).value;
-  await guardarCampo(`cliente/${pathBase}/${key}`, {cumple:si, plan, fecha}, `blq-${pathBase}-${key}-badge`);
+  await guardarCampo(`cliente/${pathBase}/${key}`, {cumple:valor, plan, fecha}, `blq-${pathBase}-${key}-badge`);
 };
 
 // ══ CLIENTE DRIVE / TIENDA / MIXTO — hora + NPS de cada uno, uno detrás de otro ══
@@ -651,8 +660,9 @@ window.guardarCTHora = async function(key){
   await guardarCampo(`cliente/tiempoCompra/${key}/horario`, {horaEntrada:entrada, horaSalida:salida});
 };
 window.setCTCompro = function(key, compro){
-  document.getElementById(`ct-${key}-compro-si`).classList.toggle('sel-si', compro===true);
-  document.getElementById(`ct-${key}-compro-no`).classList.toggle('sel-no', compro===false);
+  // Sí compró = verde (buena noticia), No compró = rojo (mala noticia) — al revés del Sí/No por defecto
+  document.getElementById(`ct-${key}-compro-si`).classList.toggle('sel-no', compro===true);
+  document.getElementById(`ct-${key}-compro-no`).classList.toggle('sel-si', compro===false);
   document.getElementById(`ct-${key}-bloque-compro`).classList.toggle('hidden', !compro);
   document.getElementById(`ct-${key}-bloque-nocompro`).classList.toggle('hidden', compro!==false);
   guardarCTNPS(key);
@@ -663,13 +673,14 @@ window.setCTPrimera = function(key, v){
   guardarCTNPS(key);
 };
 window.setCTAyuda = function(key, v){
-  document.getElementById(`ct-${key}-ayuda-si`).classList.toggle('sel-si', v===true);
-  document.getElementById(`ct-${key}-ayuda-no`).classList.toggle('sel-no', v===false);
+  // Sí encontró ayuda = verde (bueno), No = rojo (malo)
+  document.getElementById(`ct-${key}-ayuda-si`).classList.toggle('sel-no', v===true);
+  document.getElementById(`ct-${key}-ayuda-no`).classList.toggle('sel-si', v===false);
   guardarCTNPS(key);
 };
 window.guardarCTNPS = async function(key){
-  const compro = document.getElementById(`ct-${key}-compro-si`).classList.contains('sel-si');
-  const noCompro = document.getElementById(`ct-${key}-compro-no`).classList.contains('sel-no');
+  const compro = document.getElementById(`ct-${key}-compro-si`).classList.contains('sel-no');
+  const noCompro = document.getElementById(`ct-${key}-compro-no`).classList.contains('sel-si');
   if(!compro && !noCompro) return;
   if(compro){
     const valoraciones={};
@@ -688,17 +699,17 @@ window.guardarCTNPS = async function(key){
       porque: document.getElementById(`ct-${key}-porque`).value,
       probabilidadVolver: document.getElementById(`ct-${key}-probvolver`).value,
       queMejorar: document.getElementById(`ct-${key}-quemejorar-nc`).value,
-      encontroAyuda: document.getElementById(`ct-${key}-ayuda-si`).classList.contains('sel-si')
+      encontroAyuda: document.getElementById(`ct-${key}-ayuda-si`).classList.contains('sel-no')
     });
   }
 };
 
 // ══ CAPTACIÓN ══
 const CAPTACION_ITEMS = [
-  {key:'cheques', label:'¿Cumple con el objetivo de cheques de captación entregados semanalmente?'},
-  {key:'creceSemana1', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -1)'},
-  {key:'creceSemana2', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -2)'},
-  {key:'creceSemana3', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -3)'},
+  {key:'cheques', label:'¿Cumple con el objetivo de cheques de captación entregados semanalmente?', siEsBueno:true},
+  {key:'creceSemana1', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -1)', siEsBueno:true},
+  {key:'creceSemana2', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -2)', siEsBueno:true},
+  {key:'creceSemana3', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -3)', siEsBueno:true},
 ];
 function renderCaptacion(){
   renderBloqueSiNo(CAPTACION_ITEMS, 'captacion-lista', 'captacion');
@@ -728,15 +739,42 @@ window.guardarCaptacionTasa = async function(){
   }, 'captacion-tasa-badge');
 };
 
-// ══ COMPETENCIA ══
-function renderCompetencia(){ /* campos estáticos, nada que generar */ }
-window.guardarCompetencia = async function(){
-  await guardarCampo('cliente/competencia', {
-    competidor: document.getElementById('comp-competidor').value,
-    observaciones: document.getElementById('comp-observaciones').value,
-    acciones: document.getElementById('comp-acciones').value,
-  });
+// ══ COMPETENCIA (1 competidor visible, hasta 2 más con "+ Añadir") ══
+const COMPETENCIA_MAX = 3;
+let competenciaContador = 0;
+function renderCompetencia(){
+  document.getElementById('competencia-lista').innerHTML = '';
+  competenciaContador = 0;
+  document.getElementById('competencia-agregar-card').classList.remove('hidden');
+  agregarCompetidor();
+}
+window.agregarCompetidor = function(){
+  if(competenciaContador >= COMPETENCIA_MAX) return;
+  const idx = competenciaContador++;
+  if(competenciaContador >= COMPETENCIA_MAX){
+    document.getElementById('competencia-agregar-card').classList.add('hidden');
+  }
+  document.getElementById('competencia-lista').insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem;color:var(--bm-blue)">Competidor ${idx+1}</h3>
+      <label style="margin-top:0">Competidor visitado</label>
+      <input type="text" id="comp-${idx}-competidor" onblur="guardarCompetidor(${idx})">
+      <label>Observaciones</label>
+      <textarea id="comp-${idx}-observaciones" onblur="guardarCompetidor(${idx})"></textarea>
+      <label>Acciones</label>
+      <textarea id="comp-${idx}-acciones" onblur="guardarCompetidor(${idx})"></textarea>
+      <span class="saved-badge" id="comp-${idx}-badge">✓ Guardado</span>
+    </div>
+  `);
 };
+window.guardarCompetidor = async function(idx){
+  await guardarCampo(`cliente/competencia/${idx}`, {
+    competidor: document.getElementById(`comp-${idx}-competidor`).value,
+    observaciones: document.getElementById(`comp-${idx}-observaciones`).value,
+    acciones: document.getElementById(`comp-${idx}-acciones`).value,
+  }, `comp-${idx}-badge`);
+};
+renderCompetencia();
 
 // ══ TRANSPORTE ══
 const TRANSPORTE_VALORACIONES = [
@@ -836,6 +874,7 @@ window.nuevaVisita=()=>{
   document.querySelectorAll('main .cj-extra').forEach(e=>e.classList.remove('show'));
   document.querySelectorAll('main [id$="-bloque-compro"], main [id$="-bloque-nocompro"]').forEach(e=>e.classList.add('hidden'));
   document.querySelectorAll('main .saved-badge').forEach(b=>b.classList.remove('show'));
+  renderCompetencia();
   irA('pantalla-cabecera');
   historialPantallas = [];
 };
