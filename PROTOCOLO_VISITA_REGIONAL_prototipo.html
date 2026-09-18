@@ -146,17 +146,156 @@
     </div>
     <div id="cj-lista"></div>
     <div class="card">
-      <button class="btn" onclick="finalizarPrototipo()">Finalizar (prototipo) ▸</button>
-      <button class="btn btn-ghost" style="margin-left:8px" onclick="verJSON()">Ver JSON guardado</button>
+      <button class="btn" onclick="irA('pantalla-tiempocompra', renderTiempoCompra)">Continuar ▸</button>
     </div>
   </section>
 
-  <!-- ══ PANTALLA 3: FIN PROTOTIPO ══ -->
+  <!-- ══ PANTALLA: TIEMPO DE COMPRA ══ -->
+  <section id="pantalla-tiempocompra" class="hidden">
+    <div class="card">
+      <h2>3. Tiempo de Compra</h2>
+      <p style="font-size:.78rem;color:#777;margin-top:-6px">Rellena solo los tipos de cliente que hayas cronometrado — el resto se puede dejar en blanco.</p>
+    </div>
+    <div id="tc-lista"></div>
+    <div class="card">
+      <button class="btn" onclick="irA('pantalla-nps', renderNPS)">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: NPS ══ -->
+  <section id="pantalla-nps" class="hidden">
+    <div class="card">
+      <h2>4. NPS</h2>
+      <label>¿El cliente compró?</label>
+      <div class="sino">
+        <button id="nps-compro-si" onclick="setNpsCompro(true)">Sí compró</button>
+        <button id="nps-compro-no" onclick="setNpsCompro(false)">No compró</button>
+      </div>
+    </div>
+    <div id="nps-bloque-compro" class="hidden">
+      <div class="card">
+        <label style="margin-top:0">Nota de recomendación (0-10)</label>
+        <select id="nps-nota" onchange="guardarNPS()">
+          <option value="">Selecciona</option>
+        </select>
+        <div id="nps-valoraciones"></div>
+        <label>¿Es la primera vez que compra aquí?</label>
+        <div class="sino">
+          <button id="nps-primera-si" onclick="setNpsPrimera(true)">Sí</button>
+          <button id="nps-primera-no" onclick="setNpsPrimera(false)">No</button>
+        </div>
+        <label>Si pudiera mejorar una sola cosa de esta tienda, ¿cuál sería?</label>
+        <textarea id="nps-mejorar" onblur="guardarNPS()"></textarea>
+      </div>
+    </div>
+    <div id="nps-bloque-nocompro" class="hidden">
+      <div class="card">
+        <label style="margin-top:0">¿Cuál fue el motivo principal?</label>
+        <textarea id="nps-motivo" onblur="guardarNPS()"></textarea>
+        <label>¿Por qué?</label>
+        <textarea id="nps-porque" onblur="guardarNPS()"></textarea>
+        <label>¿Qué probabilidad hay de que vuelva a visitarnos?</label>
+        <input type="text" id="nps-probvolver" onblur="guardarNPS()">
+        <label>¿Qué tendríamos que mejorar para que hoy hubiera comprado?</label>
+        <textarea id="nps-quemejorar-nc" onblur="guardarNPS()"></textarea>
+        <label>¿Encontró ayuda cuando la necesitó?</label>
+        <div class="sino">
+          <button id="nps-ayuda-si" onclick="setNpsAyuda(true)">Sí</button>
+          <button id="nps-ayuda-no" onclick="setNpsAyuda(false)">No</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <button class="btn" onclick="irA('pantalla-captacion', renderCaptacion)">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: CAPTACIÓN ══ -->
+  <section id="pantalla-captacion" class="hidden">
+    <div class="card">
+      <h2>5. Captación</h2>
+    </div>
+    <div id="captacion-lista"></div>
+    <div class="card">
+      <button class="btn" onclick="irA('pantalla-competencia', renderCompetencia)">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: COMPETENCIA ══ -->
+  <section id="pantalla-competencia" class="hidden">
+    <div class="card">
+      <h2>6. Competencia</h2>
+      <label style="margin-top:0">Competidor visitado</label>
+      <input type="text" id="comp-competidor" onblur="guardarCompetencia()">
+      <label>Observaciones</label>
+      <textarea id="comp-observaciones" onblur="guardarCompetencia()"></textarea>
+      <label>Acciones</label>
+      <textarea id="comp-acciones" onblur="guardarCompetencia()"></textarea>
+    </div>
+    <div class="card">
+      <button class="btn" onclick="irA('pantalla-transporte', renderTransporte)">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: TRANSPORTE ══ -->
+  <section id="pantalla-transporte" class="hidden">
+    <div class="card">
+      <h2>7. Transporte</h2>
+      <label style="margin-top:0">Tipo de cliente</label>
+      <select id="tr-tipocliente" onchange="guardarTransporte()">
+        <option value="">Selecciona</option>
+        <option>Profesional</option>
+        <option>Particular</option>
+      </select>
+      <div id="tr-valoraciones"></div>
+      <label>¿La entrega se realizó completa y sin incidencias?</label>
+      <div class="sino">
+        <button id="tr-incidencia-si" onclick="setTrIncidencia(false)">Sí, sin incidencias</button>
+        <button id="tr-incidencia-no" onclick="setTrIncidencia(true)">Hubo incidencia</button>
+      </div>
+      <div class="cj-extra" id="tr-incidencia-extra">
+        <label>Indicar incidencia</label>
+        <textarea id="tr-incidencia-detalle" onblur="guardarTransporte()"></textarea>
+      </div>
+      <label>NPS Transporte (0-10)</label>
+      <select id="tr-nps" onchange="guardarTransporte()"><option value="">Selecciona</option></select>
+      <label>Si pudiera mejorar una sola cosa de nuestro transporte, ¿qué sería?</label>
+      <textarea id="tr-quemejorar" onblur="guardarTransporte()"></textarea>
+    </div>
+    <div class="card">
+      <button class="btn" onclick="irA('pantalla-cartera', renderCartera)">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: CARTERA ══ -->
+  <section id="pantalla-cartera" class="hidden">
+    <div class="card">
+      <h2>8. Cartera</h2>
+    </div>
+    <div id="cartera-lista"></div>
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem;color:var(--bm-blue)">Cliente principal de la cartera</h3>
+      <label style="margin-top:0">Nombre cliente (partner y razón social)</label>
+      <input type="text" id="cp-nombre" onblur="guardarClientePrincipal()">
+      <label>Obra</label>
+      <input type="text" id="cp-obra" onblur="guardarClientePrincipal()">
+      <label>Observaciones</label>
+      <textarea id="cp-observaciones" onblur="guardarClientePrincipal()"></textarea>
+      <label>Acciones</label>
+      <textarea id="cp-acciones" onblur="guardarClientePrincipal()"></textarea>
+    </div>
+    <div class="card">
+      <button class="btn" onclick="irA('pantalla-fin')">Finalizar bloque Cliente ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: FIN BLOQUE CLIENTE ══ -->
   <section id="pantalla-fin" class="hidden">
     <div class="card">
-      <h2>✅ Prototipo — bloque completado</h2>
-      <p>En la versión completa, aquí continuaría con Tiempo de Compra, NPS, Captación, Transporte, Cartera, Secciones y Gestión — mismo patrón de autoguardado en cada uno.</p>
-      <button class="btn" onclick="nuevaVisita()">Registrar otra visita</button>
+      <h2>✅ Bloque Cliente completado</h2>
+      <p>Todo lo registrado se ha guardado ya en Firebase, campo a campo. Los bloques Secciones y Gestión se añadirán próximamente con el mismo patrón.</p>
+      <button class="btn" onclick="verJSON()">Ver JSON guardado de esta visita</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
     </div>
   </section>
 
@@ -344,9 +483,7 @@ window.iniciarVisita=async()=>{
   }
 
   document.getElementById('cj-contexto').textContent = `${tienda} · ${director} · ${fecha}`;
-  renderCustomerJourney();
-  document.getElementById('pantalla-cabecera').classList.add('hidden');
-  document.getElementById('pantalla-cj').classList.remove('hidden');
+  irA('pantalla-cj', renderCustomerJourney);
 };
 
 // ══ PANTALLA 2: CUSTOMER JOURNEY ══
@@ -397,10 +534,288 @@ window.verJSON=()=>{
   }, {onlyOnce:true});
 };
 
-window.finalizarPrototipo=()=>{
-  document.getElementById('pantalla-cj').classList.add('hidden');
-  document.getElementById('pantalla-fin').classList.remove('hidden');
+// ══ NAVEGACIÓN GENÉRICA ══
+window.irA = function(destId, renderFn){
+  document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+  if(renderFn) renderFn();
+  document.getElementById(destId).classList.remove('hidden');
+  window.scrollTo(0,0);
 };
+
+// ══ GUARDADO GENÉRICO (con badge opcional) ══
+async function guardarCampo(pathSuffix, data, badgeId){
+  try{
+    await _set(ref(`visitas/${visitaActualId}/${pathSuffix}`), data);
+    if(badgeId){
+      const b=document.getElementById(badgeId);
+      if(b){ b.textContent='✓ Guardado'; b.style.color=''; b.classList.add('show'); setTimeout(()=>b.classList.remove('show'),1500); }
+    }
+  }catch(e){
+    if(badgeId){
+      const b=document.getElementById(badgeId);
+      if(b){ b.textContent='⚠ Error: '+e.message; b.style.color='var(--bm-red)'; b.classList.add('show'); }
+    }
+    showToast('⚠ Error al guardar: '+e.message, 4000);
+  }
+}
+
+function poblarEscala010(sel){
+  sel.innerHTML = '<option value="">Selecciona</option>' + Array.from({length:11},(_,i)=>`<option value="${i}">${i}</option>`).join('');
+}
+const ESCALA_VALORACION = ['Muy malo','Malo','Normal','Bueno','Excelente'];
+
+// ══ BLOQUE GENÉRICO Sí/No + Plan de acción + Cuándo (reutilizable en Captación/Cartera/etc.) ══
+function renderBloqueSiNo(items, containerId, pathBase){
+  const cont=document.getElementById(containerId);
+  cont.innerHTML = items.map(it=>`
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem">${it.label}</h3>
+      <div class="sino">
+        <button id="blq-${pathBase}-${it.key}-si" onclick="setBloqueSiNo('${pathBase}','${it.key}',true)">Sí</button>
+        <button id="blq-${pathBase}-${it.key}-no" onclick="setBloqueSiNo('${pathBase}','${it.key}',false)">No</button>
+      </div>
+      <div class="cj-extra" id="blq-${pathBase}-${it.key}-extra">
+        <label>Plan de acción</label>
+        <textarea id="blq-${pathBase}-${it.key}-plan" onblur="guardarBloqueSiNo('${pathBase}','${it.key}')"></textarea>
+        <label>¿Cuándo?</label>
+        <input type="date" id="blq-${pathBase}-${it.key}-fecha" onchange="guardarBloqueSiNo('${pathBase}','${it.key}')">
+      </div>
+      <span class="saved-badge" id="blq-${pathBase}-${it.key}-badge">✓ Guardado</span>
+    </div>
+  `).join('');
+}
+window.setBloqueSiNo = function(pathBase, key, valor){
+  document.getElementById(`blq-${pathBase}-${key}-si`).classList.toggle('sel-si', valor===true);
+  document.getElementById(`blq-${pathBase}-${key}-no`).classList.toggle('sel-no', valor===false);
+  document.getElementById(`blq-${pathBase}-${key}-extra`).classList.toggle('show', valor===true);
+  guardarBloqueSiNo(pathBase, key, valor);
+};
+window.guardarBloqueSiNo = async function(pathBase, key, valorForzado){
+  const si = valorForzado===true || document.getElementById(`blq-${pathBase}-${key}-si`).classList.contains('sel-si');
+  const no = valorForzado===false || document.getElementById(`blq-${pathBase}-${key}-no`).classList.contains('sel-no');
+  if(!si && !no) return;
+  const plan = document.getElementById(`blq-${pathBase}-${key}-plan`).value;
+  const fecha = document.getElementById(`blq-${pathBase}-${key}-fecha`).value;
+  await guardarCampo(`cliente/${pathBase}/${key}`, {cumple:si, plan, fecha}, `blq-${pathBase}-${key}-badge`);
+};
+
+// ══ TIEMPO DE COMPRA ══
+const TIEMPO_COMPRA_TIPOS = [
+  {key:'drive', label:'Cliente Drive'},
+  {key:'tienda', label:'Cliente Tienda'},
+  {key:'mixto', label:'Cliente Mixto'},
+];
+function renderTiempoCompra(){
+  const cont=document.getElementById('tc-lista');
+  cont.innerHTML = TIEMPO_COMPRA_TIPOS.map(t=>`
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem;color:var(--bm-blue)">${t.label}</h3>
+      <div class="row">
+        <div><label style="margin-top:0">Hora entrada</label><input type="time" id="tc-${t.key}-entrada" onchange="guardarTiempoCompra('${t.key}')"></div>
+        <div><label style="margin-top:0">Hora salida</label><input type="time" id="tc-${t.key}-salida" onchange="guardarTiempoCompra('${t.key}')"></div>
+      </div>
+      <span class="saved-badge" id="tc-${t.key}-badge">✓ Guardado</span>
+    </div>
+  `).join('');
+}
+window.guardarTiempoCompra = async function(key){
+  const entrada=document.getElementById(`tc-${key}-entrada`).value;
+  const salida=document.getElementById(`tc-${key}-salida`).value;
+  await guardarCampo(`cliente/tiempoCompra/${key}`, {horaEntrada:entrada, horaSalida:salida}, `tc-${key}-badge`);
+};
+
+// ══ NPS ══
+const NPS_VALORACIONES = [
+  {key:'facilidadProducto', label:'Facilidad para encontrar el producto'},
+  {key:'atencionEquipo', label:'Atención del equipo'},
+  {key:'tiempoEsperaCaja', label:'Tiempo de espera en caja'},
+  {key:'disponibilidadProducto', label:'Disponibilidad del producto'},
+  {key:'precio', label:'Precio'},
+];
+function renderNPS(){
+  poblarEscala010(document.getElementById('nps-nota'));
+  document.getElementById('nps-valoraciones').innerHTML = NPS_VALORACIONES.map(v=>`
+    <label>${v.label}</label>
+    <select id="nps-val-${v.key}" onchange="guardarNPS()">
+      <option value="">Selecciona</option>
+      ${ESCALA_VALORACION.map(o=>`<option>${o}</option>`).join('')}
+    </select>
+  `).join('');
+}
+window.setNpsCompro = function(compro){
+  document.getElementById('nps-compro-si').classList.toggle('sel-si', compro===true);
+  document.getElementById('nps-compro-no').classList.toggle('sel-no', compro===false);
+  document.getElementById('nps-bloque-compro').classList.toggle('hidden', !compro);
+  document.getElementById('nps-bloque-nocompro').classList.toggle('hidden', compro!==false);
+  guardarNPS();
+};
+window.setNpsPrimera = function(v){
+  document.getElementById('nps-primera-si').classList.toggle('sel-si', v===true);
+  document.getElementById('nps-primera-no').classList.toggle('sel-no', v===false);
+  guardarNPS();
+};
+window.setNpsAyuda = function(v){
+  document.getElementById('nps-ayuda-si').classList.toggle('sel-si', v===true);
+  document.getElementById('nps-ayuda-no').classList.toggle('sel-no', v===false);
+  guardarNPS();
+};
+window.guardarNPS = async function(){
+  const compro = document.getElementById('nps-compro-si').classList.contains('sel-si');
+  const noCompro = document.getElementById('nps-compro-no').classList.contains('sel-no');
+  if(!compro && !noCompro) return;
+  if(compro){
+    const valoraciones={};
+    NPS_VALORACIONES.forEach(v=>{ valoraciones[v.key]=document.getElementById(`nps-val-${v.key}`).value; });
+    await guardarCampo('cliente/nps', {
+      tipoCliente:'Compró',
+      notaRecomendacion: document.getElementById('nps-nota').value,
+      valoraciones,
+      primeraCompra: document.getElementById('nps-primera-si').classList.contains('sel-si'),
+      mejorar: document.getElementById('nps-mejorar').value
+    });
+  } else {
+    await guardarCampo('cliente/nps', {
+      tipoCliente:'No compró',
+      motivo: document.getElementById('nps-motivo').value,
+      porque: document.getElementById('nps-porque').value,
+      probabilidadVolver: document.getElementById('nps-probvolver').value,
+      queMejorar: document.getElementById('nps-quemejorar-nc').value,
+      encontroAyuda: document.getElementById('nps-ayuda-si').classList.contains('sel-si')
+    });
+  }
+};
+
+// ══ CAPTACIÓN ══
+const CAPTACION_ITEMS = [
+  {key:'cheques', label:'¿Cumple con el objetivo de cheques de captación entregados semanalmente?'},
+  {key:'creceSemana1', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -1)'},
+  {key:'creceSemana2', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -2)'},
+  {key:'creceSemana3', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -3)'},
+];
+function renderCaptacion(){
+  renderBloqueSiNo(CAPTACION_ITEMS, 'captacion-lista', 'captacion');
+  document.getElementById('captacion-lista').insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem">Tasa de conversión de los cheques de captación</h3>
+      <select id="captacion-tasa" onchange="guardarCaptacionTasa()">
+        <option value="">Selecciona</option>
+        <option>Mejor</option>
+        <option>Igual</option>
+        <option>Peor</option>
+      </select>
+      <label>Plan de acción</label>
+      <textarea id="captacion-tasa-plan" onblur="guardarCaptacionTasa()"></textarea>
+      <label>Fecha</label>
+      <input type="date" id="captacion-tasa-fecha" onchange="guardarCaptacionTasa()">
+      <span class="saved-badge" id="captacion-tasa-badge">✓ Guardado</span>
+    </div>
+  `);
+}
+window.guardarCaptacionTasa = async function(){
+  await guardarCampo('cliente/captacion/tasaConversion', {
+    valor: document.getElementById('captacion-tasa').value,
+    plan: document.getElementById('captacion-tasa-plan').value,
+    fecha: document.getElementById('captacion-tasa-fecha').value,
+  }, 'captacion-tasa-badge');
+};
+
+// ══ COMPETENCIA ══
+function renderCompetencia(){ /* campos estáticos, nada que generar */ }
+window.guardarCompetencia = async function(){
+  await guardarCampo('cliente/competencia', {
+    competidor: document.getElementById('comp-competidor').value,
+    observaciones: document.getElementById('comp-observaciones').value,
+    acciones: document.getElementById('comp-acciones').value,
+  });
+};
+
+// ══ TRANSPORTE ══
+const TRANSPORTE_VALORACIONES = [
+  {key:'puntualidad', label:'Puntualidad de la entrega'},
+  {key:'estadoMercancia', label:'Estado en el que recibió la mercancía'},
+  {key:'tratoTransportista', label:'Trato recibido por el transportista'},
+  {key:'informacionEntrega', label:'Información recibida sobre la entrega'},
+];
+function renderTransporte(){
+  poblarEscala010(document.getElementById('tr-nps'));
+  document.getElementById('tr-valoraciones').innerHTML = TRANSPORTE_VALORACIONES.map(v=>`
+    <label>${v.label}</label>
+    <select id="tr-val-${v.key}" onchange="guardarTransporte()">
+      <option value="">Selecciona</option>
+      ${ESCALA_VALORACION.map(o=>`<option>${o}</option>`).join('')}
+    </select>
+  `).join('');
+}
+window.setTrIncidencia = function(hayIncidencia){
+  document.getElementById('tr-incidencia-si').classList.toggle('sel-no', hayIncidencia===false);
+  document.getElementById('tr-incidencia-no').classList.toggle('sel-si', hayIncidencia===true);
+  document.getElementById('tr-incidencia-extra').classList.toggle('show', hayIncidencia===true);
+  guardarTransporte();
+};
+window.guardarTransporte = async function(){
+  const valoraciones={};
+  TRANSPORTE_VALORACIONES.forEach(v=>{ valoraciones[v.key]=document.getElementById(`tr-val-${v.key}`).value; });
+  await guardarCampo('cliente/transporte', {
+    tipoCliente: document.getElementById('tr-tipocliente').value,
+    valoraciones,
+    entregaSinIncidencias: document.getElementById('tr-incidencia-si').classList.contains('sel-no'),
+    incidenciaDetalle: document.getElementById('tr-incidencia-detalle').value,
+    npsTransporte: document.getElementById('tr-nps').value,
+    queMejorar: document.getElementById('tr-quemejorar').value,
+  });
+};
+
+// ══ CARTERA ══
+function renderCartera(){
+  document.getElementById('cartera-lista').innerHTML = `
+    <div class="card">
+      <label style="margin-top:0">Nº de clientes sin compra en el mes</label>
+      <input type="text" id="cart-sincompra-num" onblur="guardarCartera()">
+      <label>Plan de acción</label>
+      <textarea id="cart-sincompra-plan" onblur="guardarCartera()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="cart-sincompra-fecha" onchange="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">Consumo del crédito concedido de mis clientes de cartera</label>
+      <input type="text" id="cart-consumocredito" onblur="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">% de clientes con compras en 3 secciones o menos</label>
+      <input type="text" id="cart-pocassecciones" onblur="guardarCartera()">
+      <label>Plan de acción</label>
+      <textarea id="cart-pocassecciones-plan" onblur="guardarCartera()"></textarea>
+      <label>Fecha</label>
+      <input type="date" id="cart-pocassecciones-fecha" onchange="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">Clientes en riesgo (sin compra la semana anterior)</label>
+      <input type="text" id="cart-riesgo" onblur="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">% de clientes que generan el 50% de la cifra de venta</label>
+      <input type="text" id="cart-50pct" onblur="guardarCartera()">
+    </div>
+  `;
+}
+window.guardarCartera = async function(){
+  await guardarCampo('cliente/cartera/metricas', {
+    sinCompra:{numero:document.getElementById('cart-sincompra-num').value, plan:document.getElementById('cart-sincompra-plan').value, fecha:document.getElementById('cart-sincompra-fecha').value},
+    consumoCredito: document.getElementById('cart-consumocredito').value,
+    pocasSecciones:{valor:document.getElementById('cart-pocassecciones').value, plan:document.getElementById('cart-pocassecciones-plan').value, fecha:document.getElementById('cart-pocassecciones-fecha').value},
+    clientesRiesgo: document.getElementById('cart-riesgo').value,
+    clientes50pct: document.getElementById('cart-50pct').value,
+  });
+};
+window.guardarClientePrincipal = async function(){
+  await guardarCampo('cliente/cartera/clientePrincipal', {
+    nombre: document.getElementById('cp-nombre').value,
+    obra: document.getElementById('cp-obra').value,
+    observaciones: document.getElementById('cp-observaciones').value,
+    acciones: document.getElementById('cp-acciones').value,
+  });
+};
+
 window.nuevaVisita=()=>{
   visitaActualId=null;
   document.getElementById('c-director').value='';
@@ -408,8 +823,14 @@ window.nuevaVisita=()=>{
   document.getElementById('c-tipovisita').value='';
   document.getElementById('c-directortienda').value='';
   document.getElementById('c-fecha').value=hoy();
-  document.getElementById('pantalla-fin').classList.add('hidden');
-  document.getElementById('pantalla-cabecera').classList.remove('hidden');
+  ['nps-compro-si','nps-compro-no','nps-primera-si','nps-primera-no','nps-ayuda-si','nps-ayuda-no',
+   'tr-incidencia-si','tr-incidencia-no'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove('sel-si','sel-no');
+  });
+  document.getElementById('nps-bloque-compro').classList.add('hidden');
+  document.getElementById('nps-bloque-nocompro').classList.add('hidden');
+  document.getElementById('tr-incidencia-extra').classList.remove('show');
+  irA('pantalla-cabecera');
 };
 </script>
 </body>
