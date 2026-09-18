@@ -305,6 +305,17 @@
   </div>
 </div>
 
+<!-- ══ MODAL: ver datos guardados de la visita ══ -->
+<div class="modal-back" id="modal-json">
+  <div class="modal" style="max-width:600px">
+    <h2 style="color:var(--bm-blue);margin-top:0">Datos guardados de esta visita</h2>
+    <pre id="json-contenido" style="white-space:pre-wrap;word-break:break-word;font-size:.78rem;max-height:60vh;overflow:auto;background:var(--bg);padding:10px;border-radius:8px;margin:0"></pre>
+    <div style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-json').classList.remove('show')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -529,8 +540,10 @@ window.guardarCJTexto=(key)=>{
 };
 
 window.verJSON=()=>{
+  if(!visitaActualId){ showToast('Todavía no hay ninguna visita en curso.'); return; }
   _onValue(ref(`visitas/${visitaActualId}`), s=>{
-    alert(JSON.stringify(s.val(), null, 2));
+    document.getElementById('json-contenido').textContent = JSON.stringify(s.val(), null, 2);
+    document.getElementById('modal-json').classList.add('show');
   }, {onlyOnce:true});
 };
 
