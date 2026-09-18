@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BigMat – Protocolo de Visita Regional (prototipo)</title>
+<style>
+  :root{
+    --bg:#EDEEEC; --ink:#191C1E; --bm-blue:#024289; --bm-blue-light:#e8f0fa;
+    --bm-red:#E7191B; --slate:#232F38; --gris-borde:#d7dbe0; --blanco:#fff;
+    --ok:#1c8a4a; --shadow:0 2px 10px rgba(0,0,0,.08); --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#15181a; --ink:#eef0f1; --blanco:#20262a; --gris-borde:#333b40; --bm-blue-light:#0f2436;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+  header{background:var(--bm-blue);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px;
+    box-shadow:var(--shadow);position:sticky;top:0;z-index:20}
+  header h1{font-size:1.05rem;margin:0;font-weight:800}
+  header .sub{font-size:.75rem;opacity:.85}
+  .conn{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.75rem}
+  .conn-dot{width:9px;height:9px;border-radius:50%;background:#c0392b}
+  .conn-dot.online{background:#2ecc71}
+  main{max-width:640px;margin:0 auto;padding:16px 16px 60px}
+  .card{background:var(--blanco);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
+  .card h2{font-size:.95rem;margin:0 0 12px;color:var(--bm-blue);font-weight:800}
+  label{display:block;font-size:.8rem;font-weight:700;margin:10px 0 4px;color:var(--ink)}
+  input[type=text],input[type=date],select,textarea{
+    width:100%;border:1.5px solid var(--gris-borde);border-radius:8px;padding:9px 10px;
+    font-size:.9rem;background:var(--blanco);color:var(--ink);font-family:inherit}
+  textarea{min-height:70px;resize:vertical}
+  .btn{background:var(--bm-blue);color:#fff;border:none;border-radius:8px;padding:11px 18px;
+    font-weight:700;font-size:.9rem;cursor:pointer}
+  .btn:hover{opacity:.92}
+  .btn-ghost{background:transparent;color:var(--bm-blue);border:1.5px solid var(--bm-blue)}
+  .btn-sm{padding:6px 12px;font-size:.78rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row > *{flex:1;min-width:140px}
+  .sino{display:flex;gap:8px;margin-top:4px}
+  .sino button{flex:1;border:1.5px solid var(--gris-borde);background:var(--blanco);color:var(--ink);
+    border-radius:8px;padding:9px;font-weight:700;font-size:.85rem;cursor:pointer}
+  .sino button.sel-si{background:var(--bm-red);border-color:var(--bm-red);color:#fff}
+  .sino button.sel-no{background:var(--ok);border-color:var(--ok);color:#fff}
+  .cj-block{border:1.5px solid var(--gris-borde);border-radius:10px;padding:12px;margin-bottom:12px}
+  .cj-block h3{margin:0 0 6px;font-size:.88rem}
+  .cj-extra{display:none;margin-top:8px}
+  .cj-extra.show{display:block}
+  .saved-badge{font-size:.7rem;color:var(--ok);font-weight:700;opacity:0;transition:opacity .3s}
+  .saved-badge.show{opacity:1}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--slate);
+    color:#fff;padding:10px 18px;border-radius:8px;font-size:.85rem;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:opacity .3s;z-index:50}
+  .toast.show{opacity:1}
+  .hidden{display:none !important}
+  /* Setup overlay */
+  #setup-overlay{position:fixed;inset:0;background:rgba(20,24,27,.85);display:flex;
+    align-items:center;justify-content:center;z-index:100;padding:16px}
+  .setup-box{background:var(--blanco);border-radius:var(--radius);padding:26px;width:100%;max-width:420px}
+  .setup-box h2{color:var(--bm-blue);margin:0 0 6px}
+  .setup-box p{font-size:.82rem;color:#666;margin:0 0 16px}
+  .setup-err{color:var(--bm-red);font-size:.78rem;margin:8px 0;display:none}
+  .link-btn{background:none;border:none;color:var(--bm-blue);text-decoration:underline;
+    font-size:.78rem;cursor:pointer;padding:0}
+  .modal-back{position:fixed;inset:0;background:rgba(20,24,27,.5);display:none;
+    align-items:center;justify-content:center;z-index:80;padding:16px}
+  .modal-back.show{display:flex}
+  .modal{background:var(--blanco);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;
+    max-height:80vh;overflow:auto}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP: configuración Firebase (primera vez, se guarda en este navegador) ══ -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <h2>⚙️ Configuración Firebase</h2>
+    <p>Proyecto <strong>separado</strong> del de Visor Transporte — pega aquí los datos de este nuevo proyecto (Firebase Console → Configuración del proyecto → Tus apps → SDK).</p>
+    <label>API Key</label><input type="text" id="s-apikey" placeholder="AIza...">
+    <label>Database URL</label><input type="text" id="s-dburl" placeholder="https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app">
+    <label>Project ID</label><input type="text" id="s-pid" placeholder="tu-proyecto">
+    <label>App ID</label><input type="text" id="s-appid" placeholder="1:xxxx:web:xxxx">
+    <div class="setup-err" id="setup-err"></div>
+    <button class="btn" style="width:100%;margin-top:12px" onclick="conectarFirebase()">Conectar y guardar</button>
+  </div>
+</div>
+
+<header>
+  <div>
+    <h1>📋 Protocolo de Visita Regional</h1>
+    <div class="sub">Prototipo — Cabecera + Customer Journey</div>
+  </div>
+  <div class="conn"><span class="conn-dot" id="cdot"></span><span id="ctxt">Conectando…</span></div>
+</header>
+
+<main>
+
+  <!-- ══ PANTALLA 1: CABECERA ══ -->
+  <section id="pantalla-cabecera">
+    <div class="card">
+      <h2>1. Datos de la visita</h2>
+      <div class="row">
+        <div>
+          <label>Director Regional</label>
+          <select id="c-director"></select>
+        </div>
+        <div>
+          <label>Fecha visita</label>
+          <input type="date" id="c-fecha">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Tienda</label>
+          <select id="c-tienda"></select>
+        </div>
+        <div>
+          <label>Tipo de visita</label>
+          <select id="c-tipovisita">
+            <option value="">Selecciona</option>
+            <option>Semanal</option>
+            <option>Mensual</option>
+            <option>Especial</option>
+          </select>
+        </div>
+      </div>
+      <label>Director de Tienda</label>
+      <input type="text" id="c-directortienda" placeholder="Nombre del Director de Tienda">
+
+      <button class="link-btn" style="margin-top:14px" onclick="abrirModalDirectores()">⚙️ Gestionar lista de Directores Regionales</button>
+
+      <div style="margin-top:16px">
+        <button class="btn" onclick="iniciarVisita()">Iniciar visita ▸</button>
+      </div>
+      <div class="setup-err" id="cabecera-err"></div>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA 2: CUSTOMER JOURNEY (2.1 Bloque Cliente) ══ -->
+  <section id="pantalla-cj" class="hidden">
+    <div class="card">
+      <h2>2. Customer Journey — <span id="cj-contexto"></span></h2>
+      <p style="font-size:.78rem;color:#777;margin-top:-6px">Cada respuesta se guarda al momento — puedes salir e interrumpir sin perder lo ya marcado.</p>
+    </div>
+    <div id="cj-lista"></div>
+    <div class="card">
+      <button class="btn" onclick="finalizarPrototipo()">Finalizar (prototipo) ▸</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="verJSON()">Ver JSON guardado</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA 3: FIN PROTOTIPO ══ -->
+  <section id="pantalla-fin" class="hidden">
+    <div class="card">
+      <h2>✅ Prototipo — bloque completado</h2>
+      <p>En la versión completa, aquí continuaría con Tiempo de Compra, NPS, Captación, Transporte, Cartera, Secciones y Gestión — mismo patrón de autoguardado en cada uno.</p>
+      <button class="btn" onclick="nuevaVisita()">Registrar otra visita</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══ MODAL: gestionar Directores ══ -->
+<div class="modal-back" id="modal-directores">
+  <div class="modal">
+    <h2 style="color:var(--bm-blue);margin-top:0">Directores Regionales</h2>
+    <p style="font-size:.8rem;color:#777">Lista actual (<span id="dir-count">0</span>):</p>
+    <div id="dir-lista" style="font-size:.82rem;max-height:140px;overflow:auto;margin-bottom:12px"></div>
+    <label>Añadir nombres (uno por línea)</label>
+    <textarea id="dir-nuevos" placeholder="Nombre Apellido&#10;Otro Director"></textarea>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" onclick="guardarDirectoresNuevos()">Añadir</button>
+      <button class="btn btn-ghost" onclick="cerrarModalDirectores()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ CONSTANTES ══
+const TIENDAS = ["EIXAMPLE","HOSPITALET","SABADELL","SANT_ADRIA","SANT_BOI","SANT_JUST","GRAU",
+  "VALLADOLID","BENAVENTE","PALENCIA","ALCALA","ALCOBENDAS","ALCORCON","ATOCHA",
+  "GARCIA_NOBLEJAS","GETAFE","FUENLABRADA"];
+
+const CUSTOMER_JOURNEY_PUNTOS = [
+  {key:"parking", label:"Parking"},
+  {key:"entrada", label:"Entrada"},
+  {key:"recepcion", label:"Recepción"},
+  {key:"flujo_circulacion", label:"Flujo de circulación"},
+  {key:"disponibilidad_producto", label:"Disponibilidad de producto"},
+  {key:"atencion_comercial", label:"Atención comercial"},
+  {key:"paso_cajas", label:"Paso por cajas"},
+  {key:"carga", label:"Carga"},
+  {key:"salida", label:"Salida"},
+];
+
+let db=null, _ref,_onValue,_set,_push,_child;
+let visitaActualId=null;
+let directoresCache={};
+
+function hoy(){ return new Date().toISOString().slice(0,10); }
+function showToast(msg,dur=2200){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(window._toastT); window._toastT=setTimeout(()=>t.classList.remove('show'),dur);
+}
+function ref(path){ return _ref(db, path); }
+
+// ══ POBLAR SELECTS FIJOS ══
+function poblarTiendas(){
+  const sel=document.getElementById('c-tienda');
+  sel.innerHTML='<option value="">Selecciona</option>'+TIENDAS.map(t=>`<option>${t}</option>`).join('');
+}
+document.getElementById('c-fecha').value = hoy();
+poblarTiendas();
+
+// ══ FIREBASE SETUP ══
+function savedCfg(){ try{ const c=localStorage.getItem('bm_protocolo_visita_firebase'); return c?JSON.parse(c):null; }catch(e){ return null; } }
+window.conectarFirebase=()=>{
+  const apiKey=document.getElementById('s-apikey').value.trim();
+  const dbURL=document.getElementById('s-dburl').value.trim();
+  const pid=document.getElementById('s-pid').value.trim();
+  const appId=document.getElementById('s-appid').value.trim();
+  const errEl=document.getElementById('setup-err');
+  if(!apiKey||!dbURL||!pid||!appId){ errEl.textContent='Rellena todos los campos.'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+  const cfg={apiKey,databaseURL:dbURL,projectId:pid,appId};
+  localStorage.setItem('bm_protocolo_visita_firebase',JSON.stringify(cfg));
+  iniciarFirebase(cfg);
+};
+function mostrarErrorSetup(msg){
+  const errEl=document.getElementById('setup-err');
+  errEl.textContent='❌ '+msg; errEl.style.display='block';
+  console.error('[Protocolo Visita Firebase]', msg);
+}
+async function iniciarFirebase(cfg){
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+  const fbdb = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+  _ref=fbdb.ref; _onValue=fbdb.onValue; _set=fbdb.set; _push=fbdb.push; _child=fbdb.child;
+
+  let app;
+  try{ app=initializeApp(cfg); }
+  catch(e){
+    if(e.code==='app/duplicate-app'){ localStorage.removeItem('bm_protocolo_visita_firebase'); location.reload(); return; }
+    mostrarErrorSetup('Error al inicializar: '+e.message);
+    localStorage.removeItem('bm_protocolo_visita_firebase');
+    return;
+  }
+  try{ db=fbdb.getDatabase(app); }
+  catch(e){
+    mostrarErrorSetup('Error de conexión: '+e.message+' — revisa la Database URL');
+    localStorage.removeItem('bm_protocolo_visita_firebase');
+    return;
+  }
+
+  document.getElementById('setup-overlay').style.display='none';
+
+  const connTimeout=setTimeout(()=>{
+    document.getElementById('ctxt').textContent='Sin respuesta — revisa URL/Reglas';
+  },8000);
+  _onValue(ref('.info/connected'), s=>{
+    clearTimeout(connTimeout);
+    const ok=s.val();
+    document.getElementById('cdot').classList.toggle('online', !!ok);
+    document.getElementById('ctxt').textContent = ok?'En línea':'Sin conexión';
+  });
+
+  _onValue(ref('directores'), s=>{
+    directoresCache = s.val()||{};
+    poblarDirectores();
+    renderListaDirectoresModal();
+  });
+}
+(function(){
+  const cfg=savedCfg();
+  if(cfg){ document.getElementById('setup-overlay').style.display='none'; iniciarFirebase(cfg); }
+})();
+
+// ══ DIRECTORES (lista pequeña, cargable desde la propia app) ══
+function poblarDirectores(){
+  const sel=document.getElementById('c-director');
+  const nombres=Object.values(directoresCache).map(d=>d.nombre).sort();
+  sel.innerHTML='<option value="">Selecciona</option>'+nombres.map(n=>`<option>${n}</option>`).join('');
+}
+window.abrirModalDirectores=()=>{ document.getElementById('modal-directores').classList.add('show'); };
+window.cerrarModalDirectores=()=>{ document.getElementById('modal-directores').classList.remove('show'); };
+function renderListaDirectoresModal(){
+  const nombres=Object.values(directoresCache).map(d=>d.nombre).sort();
+  document.getElementById('dir-count').textContent=nombres.length;
+  document.getElementById('dir-lista').innerHTML = nombres.map(n=>`<div>• ${n}</div>`).join('') || '<em>Sin directores todavía</em>';
+}
+window.guardarDirectoresNuevos=async()=>{
+  const txt=document.getElementById('dir-nuevos').value.trim();
+  if(!txt) return;
+  const nombres=txt.split('\n').map(n=>n.trim()).filter(Boolean);
+  for(const nombre of nombres){
+    const nuevaRef=_push(ref('directores'));
+    await _set(nuevaRef, {nombre});
+  }
+  document.getElementById('dir-nuevos').value='';
+  showToast(`${nombres.length} director(es) añadido(s)`);
+};
+
+// ══ PANTALLA 1 → 2 ══
+window.iniciarVisita=async()=>{
+  const director=document.getElementById('c-director').value;
+  const fecha=document.getElementById('c-fecha').value;
+  const tienda=document.getElementById('c-tienda').value;
+  const tipoVisita=document.getElementById('c-tipovisita').value;
+  const directorTienda=document.getElementById('c-directortienda').value.trim();
+  const errEl=document.getElementById('cabecera-err');
+
+  if(!director||!fecha||!tienda||!tipoVisita){
+    errEl.textContent='Completa Director, Fecha, Tienda y Tipo de visita antes de continuar.';
+    errEl.style.display='block';
+    return;
+  }
+  errEl.style.display='none';
+
+  const nuevaRef=_push(ref('visitas'));
+  visitaActualId=nuevaRef.key;
+  await _set(nuevaRef, {
+    cabecera:{director,fecha,tienda,tipoVisita,directorTienda,creado:new Date().toISOString()}
+  });
+  showToast('Visita creada — ya está guardada');
+
+  document.getElementById('cj-contexto').textContent = `${tienda} · ${director} · ${fecha}`;
+  renderCustomerJourney();
+  document.getElementById('pantalla-cabecera').classList.add('hidden');
+  document.getElementById('pantalla-cj').classList.remove('hidden');
+};
+
+// ══ PANTALLA 2: CUSTOMER JOURNEY ══
+function renderCustomerJourney(){
+  const cont=document.getElementById('cj-lista');
+  cont.innerHTML = CUSTOMER_JOURNEY_PUNTOS.map(p=>`
+    <div class="card cj-block" id="cj-${p.key}">
+      <h3>${p.label}</h3>
+      <label style="margin-top:0">¿Hay ejes de mejora?</label>
+      <div class="sino">
+        <button onclick="setEjeMejora('${p.key}', true)" id="cj-${p.key}-si">Sí</button>
+        <button onclick="setEjeMejora('${p.key}', false)" id="cj-${p.key}-no">No</button>
+      </div>
+      <div class="cj-extra" id="cj-${p.key}-extra">
+        <label>¿Qué?</label>
+        <textarea id="cj-${p.key}-que" onblur="guardarCJTexto('${p.key}')"></textarea>
+        <label>¿Cuándo?</label>
+        <input type="date" id="cj-${p.key}-cuando" onchange="guardarCJTexto('${p.key}')">
+      </div>
+      <span class="saved-badge" id="cj-${p.key}-badge">✓ Guardado</span>
+    </div>
+  `).join('');
+}
+
+async function guardarPunto(key, data){
+  await _set(ref(`visitas/${visitaActualId}/cliente/customerJourney/${key}`), data);
+  const badge=document.getElementById(`cj-${key}-badge`);
+  badge.classList.add('show');
+  setTimeout(()=>badge.classList.remove('show'), 1500);
+}
+
+window.setEjeMejora=(key, valor)=>{
+  document.getElementById(`cj-${key}-si`).classList.toggle('sel-si', valor===true);
+  document.getElementById(`cj-${key}-no`).classList.toggle('sel-no', valor===false);
+  document.getElementById(`cj-${key}-extra`).classList.toggle('show', valor===true);
+  guardarPunto(key, {ejeMejora: valor});
+};
+
+window.guardarCJTexto=(key)=>{
+  const que=document.getElementById(`cj-${key}-que`).value;
+  const cuando=document.getElementById(`cj-${key}-cuando`).value;
+  guardarPunto(key, {ejeMejora:true, que, cuando});
+};
+
+window.verJSON=()=>{
+  _onValue(ref(`visitas/${visitaActualId}`), s=>{
+    alert(JSON.stringify(s.val(), null, 2));
+  }, {onlyOnce:true});
+};
+
+window.finalizarPrototipo=()=>{
+  document.getElementById('pantalla-cj').classList.add('hidden');
+  document.getElementById('pantalla-fin').classList.remove('hidden');
+};
+window.nuevaVisita=()=>{
+  visitaActualId=null;
+  document.getElementById('c-director').value='';
+  document.getElementById('c-tienda').value='';
+  document.getElementById('c-tipovisita').value='';
+  document.getElementById('c-directortienda').value='';
+  document.getElementById('c-fecha').value=hoy();
+  document.getElementById('pantalla-fin').classList.add('hidden');
+  document.getElementById('pantalla-cabecera').classList.remove('hidden');
+};
+</script>
+</body>
+</html>
