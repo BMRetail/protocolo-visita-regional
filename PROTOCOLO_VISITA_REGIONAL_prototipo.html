@@ -296,7 +296,67 @@
   <section id="pantalla-fin-secciones" class="hidden">
     <div class="card">
       <h2>✅ Secciones completado</h2>
-      <p>Todo lo registrado se ha guardado ya en Firebase. El bloque Gestión se añadirá próximamente.</p>
+      <p>Todo lo registrado se ha guardado ya en Firebase.</p>
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-gestion')">Continuar a Gestión ▸</button>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="verJSON()">Ver JSON guardado de esta visita</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: GESTIÓN ══ -->
+  <section id="pantalla-gestion" class="hidden">
+    <div class="card"><h2>12. Productividad</h2></div>
+    <div id="gestion-productividad-lista"></div>
+
+    <div class="card"><h2>13. Horas</h2></div>
+    <div id="gestion-horas-lista"></div>
+
+    <div class="card">
+      <h2>14. Índice de la tienda</h2>
+      <label style="margin-top:0">¿El índice de la tienda es?</label>
+      <input type="text" id="ges-indice" onblur="guardarIndice()">
+      <label>Plan de acción</label>
+      <textarea id="ges-indice-plan" onblur="guardarIndice()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="ges-indice-cuando" onchange="guardarIndice()">
+    </div>
+    <div id="gestion-recursos-lista"></div>
+
+    <div class="card"><h2>15. Horas Punta — Nº de efectivos</h2></div>
+    <div id="gestion-horaspunta-lista"></div>
+
+    <div class="card"><h2>16. Horas Valle — Nº de efectivos</h2></div>
+    <div id="gestion-horasvalle-lista"></div>
+
+    <div class="card"><h2>17. Seguridad</h2></div>
+    <div id="gestion-seguridad-lista"></div>
+
+    <div class="card"><h2>18. Ventas vs N-1</h2></div>
+    <div id="gestion-ventas-lista"></div>
+
+    <div class="card"><h2>19. Precios y Cheques</h2></div>
+    <div id="gestion-precios-lista"></div>
+
+    <div class="card"><h2>20. Demarca y Stock</h2></div>
+    <div id="gestion-demarca-lista"></div>
+
+    <div class="card"><h2>21. Workflows</h2></div>
+    <div id="gestion-workflows-lista"></div>
+
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-fin-gestion')">Finalizar Gestión ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: FIN GESTIÓN (fin del protocolo completo) ══ -->
+  <section id="pantalla-fin-gestion" class="hidden">
+    <div class="card">
+      <h2>🎉 Protocolo completo</h2>
+      <p>Cliente, Secciones y Gestión guardados en Firebase, campo a campo, sin perder nada en el camino.</p>
       <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
       <button class="btn" style="margin-left:8px" onclick="verJSON()">Ver JSON guardado de esta visita</button>
       <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
@@ -587,6 +647,7 @@ function renderBloqueSiNo(items, containerId, pathBase, firebaseBase){
   cont.innerHTML = items.map(it=>`
     <div class="card" data-fbbase="${fb}">
       <h3 style="margin:0 0 10px;font-size:.9rem">${it.label}</h3>
+      ${it.extraHtml||''}
       <div class="sino">
         <button id="blq-${pathBase}-${it.key}-si" onclick="setBloqueSiNo('${pathBase}','${it.key}',true,${!!it.siEsBueno})">Sí</button>
         <button id="blq-${pathBase}-${it.key}-no" onclick="setBloqueSiNo('${pathBase}','${it.key}',false,${!!it.siEsBueno})">No</button>
@@ -998,6 +1059,87 @@ function renderImplantacion(){
   renderBloqueSiNo(IMPLANTACION_ITEMS, 'implantacion-lista', 'implantacion', 'secciones/implantacion');
 }
 renderImplantacion();
+
+// ══ GESTIÓN ══
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+renderBloqueSiNo(
+  [{key:'productividad', label:'¿La productividad es igual o superior al objetivo de 300.000€?', siEsBueno:true}],
+  'gestion-productividad-lista', 'gestionProductividad', 'gestion/productividad'
+);
+
+renderBloqueSiNo([
+  {key:'excesos', label:'¿Hay personas con excesos de horas?',
+   extraHtml:`<label style="margin-top:0">Nº de personas con excesos</label><input type="text" id="hx-excesos-personas" onblur="guardarCampo('gestion/horas/excesosPersonas',{valor:this.value})">
+   <label>Número de horas excesas</label><input type="text" id="hx-excesos-horas" onblur="guardarCampo('gestion/horas/excesosHoras',{valor:this.value})">`},
+  {key:'defecto', label:'¿Hay personas con defectos de horas?',
+   extraHtml:`<label style="margin-top:0">Nº de personas con defectos</label><input type="text" id="hx-defecto-personas" onblur="guardarCampo('gestion/horas/defectoPersonas',{valor:this.value})">
+   <label>Número de horas pendientes</label><input type="text" id="hx-defecto-horas" onblur="guardarCampo('gestion/horas/defectoHoras',{valor:this.value})">`},
+], 'gestion-horas-lista', 'gestionHoras', 'gestion/horas');
+
+window.guardarIndice = async function(){
+  await guardarCampo('gestion/indiceTienda', {
+    valor: document.getElementById('ges-indice').value,
+    plan: document.getElementById('ges-indice-plan').value,
+    cuando: document.getElementById('ges-indice-cuando').value,
+  });
+};
+
+renderBloqueSiNo(
+  [{key:'recursosAfluencia', label:'¿Los recursos coinciden con la afluencia?', siEsBueno:true}],
+  'gestion-recursos-lista', 'gestionRecursos', 'gestion/recursos'
+);
+
+const DEPARTAMENTOS = ['cajas','comercio','drive','transporte','logistica'];
+const DEPARTAMENTOS_LABEL = {cajas:'Cajas',comercio:'Comercio',drive:'Drive',transporte:'Transporte',logistica:'Logística'};
+function itemsHorasFranja(franja, pregunta){
+  return DEPARTAMENTOS.map(d => ({
+    key: d,
+    label: `${DEPARTAMENTOS_LABEL[d]} — ${pregunta}`,
+    siEsBueno: true,
+    extraHtml: `<label style="margin-top:0">Número de efectivos</label><input type="text" id="hf-${franja}-${d}-num" onblur="guardarCampo('gestion/horas${cap(franja)}/${d}Numero',{valor:this.value})">`
+  }));
+}
+renderBloqueSiNo(itemsHorasFranja('punta','¿Todos están disponibles para el cliente?'), 'gestion-horaspunta-lista', 'gestionHorasPunta', 'gestion/horasPunta');
+renderBloqueSiNo(itemsHorasFranja('valle','¿Las tareas que realiza son acordes a la situación?'), 'gestion-horasvalle-lista', 'gestionHorasValle', 'gestion/horasValle');
+
+renderBloqueSiNo([
+  {key:'epis', label:'¿Es correcto el uso de EPIs?', siEsBueno:true},
+  {key:'estibacion', label:'¿Es correcta la Estibación?', siEsBueno:true},
+  {key:'cargaClientes', label:'¿Es correcta la Carga a Clientes?', siEsBueno:true},
+  {key:'manipulacion', label:'¿Es correcta la Manipulación?', siEsBueno:true},
+  {key:'ordenLimpieza', label:'¿Hay orden y limpieza?', siEsBueno:true},
+], 'gestion-seguridad-lista', 'gestionSeguridad', 'gestion/seguridad');
+
+renderBloqueSiNo([
+  {key:'tienda', label:'La tienda, ¿crece vs N-1?', siEsBueno:true},
+  {key:'construccion', label:'Construcción, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'madera', label:'Madera, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'pintura', label:'Pintura, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'ceramica', label:'Cerámica, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'sanitario', label:'Sanitario, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'electricidad', label:'Electricidad, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'fontaneria', label:'Fontanería, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'cocinas', label:'Cocinas, ¿crece respecto a N-1?', siEsBueno:true},
+  {key:'totalGeneral', label:'Total general, ¿crece respecto a N-1?', siEsBueno:true},
+], 'gestion-ventas-lista', 'gestionVentas', 'gestion/ventas');
+
+renderBloqueSiNo([
+  {key:'preciosForzados', label:'¿Mejora el ratio de los precios forzados?', siEsBueno:true},
+  {key:'cheques', label:'¿Mejora el ratio de cheques?', siEsBueno:true},
+], 'gestion-precios-lista', 'gestionPrecios', 'gestion/precios');
+
+renderBloqueSiNo([
+  {key:'demarca', label:'¿El % de demarca sobre la CV de la tienda es inferior al 0,8%?', siEsBueno:true},
+  {key:'inventariosRotativos', label:'¿Cumple con los inventarios rotativos?', siEsBueno:true},
+  {key:'fiabilidadStock', label:'¿Cumple con el ratio de fiabilidad de stock?', siEsBueno:true},
+], 'gestion-demarca-lista', 'gestionDemarca', 'gestion/demarcaStock');
+
+renderBloqueSiNo([
+  {key:'pendientes', label:'¿Hay workflows pendientes?'},
+  {key:'vencidos', label:'¿Hay workflows vencidos?'},
+  {key:'criticos', label:'¿Hay workflows críticos? (más de 30 días sin gestionar)'},
+], 'gestion-workflows-lista', 'gestionWorkflows', 'gestion/workflows');
 
 window.nuevaVisita=()=>{
   visitaActualId=null;
