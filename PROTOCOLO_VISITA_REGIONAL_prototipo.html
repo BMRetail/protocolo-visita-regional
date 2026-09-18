@@ -247,7 +247,56 @@
   <section id="pantalla-fin" class="hidden">
     <div class="card">
       <h2>✅ Bloque Cliente completado</h2>
-      <p>Todo lo registrado se ha guardado ya en Firebase, campo a campo. Los bloques Secciones y Gestión se añadirán próximamente con el mismo patrón.</p>
+      <p>Todo lo registrado se ha guardado ya en Firebase, campo a campo. El bloque Gestión se añadirá próximamente con el mismo patrón.</p>
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-secciones')">Continuar a Secciones ▸</button>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="verJSON()">Ver JSON guardado de esta visita</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: SECCIONES (bloque Producto) ══ -->
+  <section id="pantalla-secciones" class="hidden">
+    <div class="card">
+      <h2>9. Rupturas</h2>
+      <label style="margin-top:0">% de Rupturas + Futuras rupturas</label>
+      <input type="text" id="sec-rupturas-pct" onblur="guardarRupturas()">
+      <label>Plan de trabajo</label>
+      <textarea id="sec-rupturas-plan" onblur="guardarRupturas()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="sec-rupturas-cuando" onchange="guardarRupturas()">
+      <label>Familias críticas</label>
+      <input type="text" id="sec-familiascriticas" onblur="guardarRupturas()" placeholder="Ej: CERAMICA;ELECTRICIDAD;FERRETERIA">
+      <label>Plan de acción</label>
+      <textarea id="sec-familiascriticas-plan" onblur="guardarRupturas()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="sec-familiascriticas-cuando" onchange="guardarRupturas()">
+    </div>
+
+    <div class="card">
+      <h2>10. Familias de lineal</h2>
+      <p style="font-size:.78rem;color:#777;margin-top:-6px">Escala 1 (muy mal) a 5 (muy bien) en cada aspecto.</p>
+    </div>
+    <div id="familias-lista"></div>
+
+    <div class="card">
+      <h2>11. Implantación comercial</h2>
+    </div>
+    <div id="implantacion-lista"></div>
+
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-fin-secciones')">Finalizar Secciones ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: FIN SECCIONES ══ -->
+  <section id="pantalla-fin-secciones" class="hidden">
+    <div class="card">
+      <h2>✅ Secciones completado</h2>
+      <p>Todo lo registrado se ha guardado ya en Firebase. El bloque Gestión se añadirá próximamente.</p>
       <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
       <button class="btn" style="margin-left:8px" onclick="verJSON()">Ver JSON guardado de esta visita</button>
       <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
@@ -532,10 +581,11 @@ const ESCALA_VALORACION = ['Muy malo','Malo','Normal','Bueno','Excelente'];
 // ══ BLOQUE GENÉRICO Sí/No + Plan de acción + Cuándo (reutilizable en Captación/Cartera/etc.) ══
 // it.siEsBueno=true -> "Sí" es la respuesta buena (verde) y "No" la mala (rojo, muestra Plan de acción).
 // Por defecto (sin siEsBueno) es al revés: "Sí" = problema (rojo), como en Customer Journey.
-function renderBloqueSiNo(items, containerId, pathBase){
+function renderBloqueSiNo(items, containerId, pathBase, firebaseBase){
+  const fb = firebaseBase || `cliente/${pathBase}`;
   const cont=document.getElementById(containerId);
   cont.innerHTML = items.map(it=>`
-    <div class="card">
+    <div class="card" data-fbbase="${fb}">
       <h3 style="margin:0 0 10px;font-size:.9rem">${it.label}</h3>
       <div class="sino">
         <button id="blq-${pathBase}-${it.key}-si" onclick="setBloqueSiNo('${pathBase}','${it.key}',true,${!!it.siEsBueno})">Sí</button>
@@ -565,14 +615,16 @@ window.setBloqueSiNo = function(pathBase, key, valor, siEsBueno){
 };
 window.guardarBloqueSiNo = async function(pathBase, key, valorForzado){
   let valor = valorForzado;
+  const elSi = document.getElementById(`blq-${pathBase}-${key}-si`);
   if(valor===undefined){
-    const raw = document.getElementById(`blq-${pathBase}-${key}-si`).dataset.valor;
+    const raw = elSi.dataset.valor;
     if(raw===undefined) return;
     valor = raw === 'true';
   }
+  const fb = elSi.closest('[data-fbbase]').dataset.fbbase;
   const plan = document.getElementById(`blq-${pathBase}-${key}-plan`).value;
   const fecha = document.getElementById(`blq-${pathBase}-${key}-fecha`).value;
-  await guardarCampo(`cliente/${pathBase}/${key}`, {cumple:valor, plan, fecha}, `blq-${pathBase}-${key}-badge`);
+  await guardarCampo(`${fb}/${key}`, {cumple:valor, plan, fecha}, `blq-${pathBase}-${key}-badge`);
 };
 
 // ══ CLIENTE DRIVE / TIENDA / MIXTO — hora + NPS de cada uno, uno detrás de otro ══
@@ -864,6 +916,88 @@ window.guardarClientePrincipal = async function(){
     acciones: document.getElementById('cp-acciones').value,
   });
 };
+
+// ══ SECCIONES — RUPTURAS ══
+window.guardarRupturas = async function(){
+  await guardarCampo('secciones/rupturas', {
+    porcentaje: document.getElementById('sec-rupturas-pct').value,
+    planTrabajo: document.getElementById('sec-rupturas-plan').value,
+    cuandoTrabajo: document.getElementById('sec-rupturas-cuando').value,
+    familiasCriticas: document.getElementById('sec-familiascriticas').value,
+    planAccion: document.getElementById('sec-familiascriticas-plan').value,
+    cuandoAccion: document.getElementById('sec-familiascriticas-cuando').value,
+  });
+};
+
+// ══ SECCIONES — FAMILIAS DE LINEAL (10, mismas 7 escalas cada una) ══
+const FAMILIAS_LINEAL = [
+  {key:'alimentacionAgua', label:'Alimentación agua'},
+  {key:'accFontaneria', label:'Accesorios fontanería'},
+  {key:'accInstalacionesElectricas', label:'Accesorios instalaciones eléctricas'},
+  {key:'cable', label:'Cable'},
+  {key:'mecanismos', label:'Mecanismos'},
+  {key:'adhesivos', label:'Adhesivos'},
+  {key:'herramientasPintor', label:'Herramientas pintor'},
+  {key:'proteccion', label:'Protección'},
+  {key:'accHerramienta', label:'Accesorios herramienta'},
+  {key:'tornilleria', label:'Tornillería'},
+];
+const ESCALA_FAMILIA_ATRIBUTOS = [
+  {key:'lleno', label:'Lleno'},
+  {key:'sensacionLleno', label:'Sensación de lleno'},
+  {key:'balizado', label:'Balizado'},
+  {key:'limpieza', label:'Limpieza'},
+  {key:'facing', label:'Facing'},
+  {key:'roturas', label:'Roturas'},
+  {key:'fueraDeSitio', label:'Producto fuera de sitio'},
+];
+function poblarEscala15(sel){
+  sel.innerHTML = '<option value="">Selecciona</option>' + [1,2,3,4,5].map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+function renderFamilias(){
+  const cont = document.getElementById('familias-lista');
+  cont.innerHTML = FAMILIAS_LINEAL.map(f=>`
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem;color:var(--bm-blue)">${f.label}</h3>
+      <div id="fam-${f.key}-attrs"></div>
+      <label>Plan de acción</label>
+      <textarea id="fam-${f.key}-plan" onblur="guardarFamilia('${f.key}')"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="fam-${f.key}-cuando" onchange="guardarFamilia('${f.key}')">
+      <span class="saved-badge" id="fam-${f.key}-badge">✓ Guardado</span>
+    </div>
+  `).join('');
+  FAMILIAS_LINEAL.forEach(f=>{
+    const cont2 = document.getElementById(`fam-${f.key}-attrs`);
+    cont2.innerHTML = ESCALA_FAMILIA_ATRIBUTOS.map(a=>`
+      <label style="margin-top:8px">${a.label}</label>
+      <select id="fam-${f.key}-${a.key}" onchange="guardarFamilia('${f.key}')"></select>
+    `).join('');
+    ESCALA_FAMILIA_ATRIBUTOS.forEach(a=> poblarEscala15(document.getElementById(`fam-${f.key}-${a.key}`)));
+  });
+}
+window.guardarFamilia = async function(key){
+  const datos = {
+    plan: document.getElementById(`fam-${key}-plan`).value,
+    cuando: document.getElementById(`fam-${key}-cuando`).value,
+  };
+  ESCALA_FAMILIA_ATRIBUTOS.forEach(a=>{ datos[a.key] = document.getElementById(`fam-${key}-${a.key}`).value; });
+  await guardarCampo(`secciones/familias/${key}`, datos, `fam-${key}-badge`);
+};
+renderFamilias();
+
+// ══ SECCIONES — IMPLANTACIÓN COMERCIAL ══
+const IMPLANTACION_PUNTOS = ['cabecera','zonasAccion','ganchosStrips','cajas'];
+const IMPLANTACION_PUNTOS_LABEL = {cabecera:'Cabecera', zonasAccion:'Zonas de acción', ganchosStrips:'Ganchos strips', cajas:'Cajas'};
+const IMPLANTACION_ITEMS = IMPLANTACION_PUNTOS.flatMap(p => [
+  {key:`${p}_directrices`, label:`${IMPLANTACION_PUNTOS_LABEL[p]} — ¿Cumplen las directrices marcadas por la Compañía?`, siEsBueno:true},
+  {key:`${p}_ventas`, label:`${IMPLANTACION_PUNTOS_LABEL[p]} — ¿El % de ventas está por encima de la media de la región?`, siEsBueno:true},
+  {key:`${p}_efectividad`, label:`${IMPLANTACION_PUNTOS_LABEL[p]} — ¿La efectividad está por encima de la media de la región?`, siEsBueno:true},
+]);
+function renderImplantacion(){
+  renderBloqueSiNo(IMPLANTACION_ITEMS, 'implantacion-lista', 'implantacion', 'secciones/implantacion');
+}
+renderImplantacion();
 
 window.nuevaVisita=()=>{
   visitaActualId=null;
