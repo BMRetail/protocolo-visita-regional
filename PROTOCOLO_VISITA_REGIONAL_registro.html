@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BigMat – Protocolo de Visita Regional</title>
+<style>
+  :root{
+    --bg:#EDEEEC; --ink:#191C1E; --bm-blue:#024289; --bm-blue-light:#e8f0fa;
+    --bm-red:#E7191B; --slate:#232F38; --gris-borde:#d7dbe0; --blanco:#fff;
+    --ok:#1c8a4a; --shadow:0 2px 10px rgba(0,0,0,.08); --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#15181a; --ink:#eef0f1; --blanco:#20262a; --gris-borde:#333b40; --bm-blue-light:#0f2436;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+  header{background:var(--bm-blue);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px;
+    box-shadow:var(--shadow);position:sticky;top:0;z-index:20}
+  header h1{font-size:1.05rem;margin:0;font-weight:800}
+  header .sub{font-size:.75rem;opacity:.85;margin-left:28px}
+  .conn{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.75rem}
+  .conn-dot{width:9px;height:9px;border-radius:50%;background:#c0392b}
+  .conn-dot.online{background:#2ecc71}
+  main{max-width:640px;margin:0 auto;padding:16px 16px 60px}
+  .card{background:var(--blanco);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
+  .card h2{font-size:.95rem;margin:0 0 12px;color:var(--bm-blue);font-weight:800}
+  label{display:block;font-size:.8rem;font-weight:700;margin:10px 0 4px;color:var(--ink)}
+  input[type=text],input[type=date],input[type=time],input[type=password],select,textarea{
+    width:100%;border:1.5px solid var(--gris-borde);border-radius:8px;padding:9px 10px;
+    font-size:.9rem;background:var(--blanco);color:var(--ink);font-family:inherit}
+  textarea{min-height:70px;resize:vertical}
+  .btn{background:var(--bm-blue);color:#fff;border:none;border-radius:8px;padding:11px 18px;
+    font-weight:700;font-size:.9rem;cursor:pointer}
+  .btn:hover{opacity:.92}
+  .btn-ghost{background:transparent;color:var(--bm-blue);border:1.5px solid var(--bm-blue)}
+  .btn-sm{padding:6px 12px;font-size:.78rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row > *{flex:1;min-width:140px}
+  .sino{display:flex;gap:8px;margin-top:4px}
+  .sino button{flex:1;border:1.5px solid var(--gris-borde);background:var(--blanco);color:var(--ink);
+    border-radius:8px;padding:9px;font-weight:700;font-size:.85rem;cursor:pointer}
+  .sino button.sel-si{background:var(--bm-red);border-color:var(--bm-red);color:#fff}
+  .sino button.sel-no{background:var(--ok);border-color:var(--ok);color:#fff}
+  .cj-block{border:1.5px solid var(--gris-borde);border-radius:10px;padding:12px;margin-bottom:12px}
+  .cj-block h3{margin:0 0 6px;font-size:.88rem}
+  .cj-extra{display:none;margin-top:8px}
+  .cj-extra.show{display:block}
+  .saved-badge{font-size:.7rem;color:var(--ok);font-weight:700;opacity:0;transition:opacity .3s}
+  .saved-badge.show{opacity:1}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--slate);
+    color:#fff;padding:10px 18px;border-radius:8px;font-size:.85rem;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:opacity .3s;z-index:50}
+  .toast.show{opacity:1}
+  .hidden{display:none !important}
+  /* Setup overlay */
+  #setup-overlay{position:fixed;inset:0;background:rgba(20,24,27,.85);display:flex;
+    align-items:center;justify-content:center;z-index:100;padding:16px}
+  .setup-box{background:var(--blanco);border-radius:var(--radius);padding:26px;width:100%;max-width:420px}
+  .setup-box h2{color:var(--bm-blue);margin:0 0 6px}
+  .setup-box p{font-size:.82rem;color:#666;margin:0 0 16px}
+  .setup-err{color:var(--bm-red);font-size:.78rem;margin:8px 0;display:none}
+  .link-btn{background:none;border:none;color:var(--bm-blue);text-decoration:underline;
+    font-size:.78rem;cursor:pointer;padding:0}
+  .modal-back{position:fixed;inset:0;background:rgba(20,24,27,.5);display:none;
+    align-items:center;justify-content:center;z-index:80;padding:16px}
+  .modal-back.show{display:flex}
+  .modal{background:var(--blanco);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;
+    max-height:80vh;overflow:auto}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP: configuración Firebase (primera vez, se guarda en este navegador) ══ -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <h2>⚙️ Configuración Firebase</h2>
+    <p>Proyecto <strong>separado</strong> del de Visor Transporte — pega aquí los datos de este nuevo proyecto (Firebase Console → Configuración del proyecto → Tus apps → SDK).</p>
+    <label>API Key</label><input type="text" id="s-apikey" placeholder="AIza...">
+    <label>Database URL</label><input type="text" id="s-dburl" placeholder="https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app">
+    <label>Project ID</label><input type="text" id="s-pid" placeholder="tu-proyecto">
+    <label>App ID</label><input type="text" id="s-appid" placeholder="1:xxxx:web:xxxx">
+    <div class="setup-err" id="setup-err"></div>
+    <button class="btn" style="width:100%;margin-top:12px" onclick="conectarFirebase()">Conectar y guardar</button>
+  </div>
+</div>
+
+<header>
+  <div>
+    <h1>📋 Protocolo de Visita Regional</h1>
+    <div class="sub">Registro de visita — Cliente, Secciones y Gestión</div>
+  </div>
+  <div class="conn"><span class="conn-dot" id="cdot"></span><span id="ctxt">Conectando…</span></div>
+</header>
+
+<main>
+
+  <!-- ══ PANTALLA 1: CABECERA ══ -->
+  <section id="pantalla-cabecera">
+    <div class="card hidden" id="banner-visita-pendiente" style="background:var(--bm-blue-light);border:1.5px solid var(--bm-blue)">
+      <h3 style="margin:0 0 6px;font-size:.9rem;color:var(--bm-blue)">📌 Tienes una visita sin terminar</h3>
+      <p id="banner-visita-info" style="font-size:.85rem;margin:0 0 12px"></p>
+      <button class="btn" onclick="continuarVisitaPendiente()">Continuar esa visita ▸</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="descartarVisitaPendiente()">Empezar una nueva</button>
+    </div>
+    <div class="card">
+      <h2>1. Datos de la visita</h2>
+      <div class="row">
+        <div>
+          <label>Director Regional</label>
+          <select id="c-director"></select>
+        </div>
+        <div>
+          <label>Fecha visita</label>
+          <input type="date" id="c-fecha">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Tienda</label>
+          <select id="c-tienda"></select>
+        </div>
+        <div>
+          <label>Tipo de visita</label>
+          <select id="c-tipovisita">
+            <option value="">Selecciona</option>
+            <option>Semanal</option>
+            <option>Mensual</option>
+            <option>Especial</option>
+          </select>
+        </div>
+      </div>
+      <label>Director de Tienda</label>
+      <select id="c-directortienda"></select>
+
+      <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
+        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectoresRegionales)">⚙️ Gestionar Directores Regionales</button>
+        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectores)">⚙️ Gestionar Directores de Tienda</button>
+      </div>
+
+      <div style="margin-top:16px">
+        <button class="btn" onclick="iniciarVisita()">Iniciar visita ▸</button>
+      </div>
+      <div class="setup-err" id="cabecera-err"></div>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA 2: CUSTOMER JOURNEY (2.1 Bloque Cliente) ══ -->
+  <section id="pantalla-cj" class="hidden">
+    <div class="card">
+      <h2>2. Customer Journey — <span id="cj-contexto"></span></h2>
+      <p style="font-size:.78rem;color:#777;margin-top:-6px">Cada respuesta se guarda al momento — puedes salir e interrumpir sin perder lo ya marcado.</p>
+    </div>
+    <div id="cj-lista"></div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-ct-drive')">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLAS: CLIENTE DRIVE / TIENDA / MIXTO (hora + NPS de cada uno) ══ -->
+  <section id="pantalla-ct-drive" class="hidden">
+    <div id="ct-drive-container"></div>
+  </section>
+  <section id="pantalla-ct-tienda" class="hidden">
+    <div id="ct-tienda-container"></div>
+  </section>
+  <section id="pantalla-ct-mixto" class="hidden">
+    <div id="ct-mixto-container"></div>
+  </section>
+
+  <!-- ══ PANTALLA: CAPTACIÓN ══ -->
+  <section id="pantalla-captacion" class="hidden">
+    <div class="card">
+      <h2>5. Captación</h2>
+    </div>
+    <div id="captacion-lista"></div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-competencia')">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: COMPETENCIA ══ -->
+  <section id="pantalla-competencia" class="hidden">
+    <div class="card">
+      <h2>6. Competencia</h2>
+    </div>
+    <div id="competencia-lista"></div>
+    <div class="card" id="competencia-agregar-card">
+      <button class="btn btn-ghost" id="btn-agregar-competidor" onclick="agregarCompetidor()">+ Añadir otro competidor</button>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-transporte')">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: TRANSPORTE ══ -->
+  <section id="pantalla-transporte" class="hidden">
+    <div class="card">
+      <h2>7. Transporte</h2>
+      <label style="margin-top:0">Tipo de cliente</label>
+      <select id="tr-tipocliente" onchange="guardarTransporte()">
+        <option value="">Selecciona</option>
+        <option>Profesional</option>
+        <option>Particular</option>
+      </select>
+      <div id="tr-valoraciones"></div>
+      <label>¿La entrega se realizó completa y sin incidencias?</label>
+      <div class="sino">
+        <button id="tr-incidencia-si" onclick="setTrIncidencia(false)">Sí, sin incidencias</button>
+        <button id="tr-incidencia-no" onclick="setTrIncidencia(true)">Hubo incidencia</button>
+      </div>
+      <div class="cj-extra" id="tr-incidencia-extra">
+        <label>Indicar incidencia</label>
+        <textarea id="tr-incidencia-detalle" onblur="guardarTransporte()"></textarea>
+      </div>
+      <label>NPS Transporte (0-10)</label>
+      <select id="tr-nps" onchange="guardarTransporte()"><option value="">Selecciona</option></select>
+      <label>Si pudiera mejorar una sola cosa de nuestro transporte, ¿qué sería?</label>
+      <textarea id="tr-quemejorar" onblur="guardarTransporte()"></textarea>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-cartera')">Continuar ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: CARTERA ══ -->
+  <section id="pantalla-cartera" class="hidden">
+    <div class="card">
+      <h2>8. Cartera</h2>
+    </div>
+    <div id="cartera-lista"></div>
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem;color:var(--bm-blue)">Cliente principal de la cartera</h3>
+      <label style="margin-top:0">Nombre cliente (partner y razón social)</label>
+      <input type="text" id="cp-nombre" onblur="guardarClientePrincipal()">
+      <label>Obra</label>
+      <input type="text" id="cp-obra" onblur="guardarClientePrincipal()">
+      <label>Observaciones</label>
+      <textarea id="cp-observaciones" onblur="guardarClientePrincipal()"></textarea>
+      <label>Acciones</label>
+      <textarea id="cp-acciones" onblur="guardarClientePrincipal()"></textarea>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-fin')">Finalizar bloque Cliente ▸</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: FIN BLOQUE CLIENTE ══ -->
+  <section id="pantalla-fin" class="hidden">
+    <div class="card">
+      <h2>✅ Bloque Cliente completado</h2>
+      <p>Todo lo registrado se ha guardado correctamente.</p>
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-sec-rupturas')">Continuar a Secciones ▸</button>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="verJSON()">Ver datos guardados de esta visita</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
+    </div>
+  </section>
+
+  <!-- Las pantallas de Secciones (Rupturas + 10 familias + Implantación) y de Gestión
+       (Productividad, Horas, Índice, Recursos, Horas Punta/Valle, Seguridad, Ventas,
+       Precios, Demarca/Stock, Workflows) se generan dinámicamente al cargar la página
+       — ver "SECUENCIA DE PANTALLAS" en el script, para que cada bloque sea su propia
+       pantalla con Atrás/Continuar en vez de una única pantalla larga. -->
+
+  <!-- ══ PANTALLA: FIN SECCIONES ══ -->
+  <section id="pantalla-fin-secciones" class="hidden">
+    <div class="card">
+      <h2>✅ Secciones completado</h2>
+      <p>Todo lo registrado se ha guardado correctamente.</p>
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('pantalla-ges-productividad')">Continuar a Gestión ▸</button>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="verJSON()">Ver datos guardados de esta visita</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
+    </div>
+  </section>
+
+  <!-- ══ PANTALLA: FIN GESTIÓN (fin del protocolo completo) ══ -->
+  <section id="pantalla-fin-gestion" class="hidden">
+    <div class="card">
+      <h2>🎉 Protocolo completo</h2>
+      <p>Cliente, Secciones y Gestión guardados correctamente, sin perder nada en el camino.</p>
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="verJSON()">Ver datos guardados de esta visita</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══ MODAL: gestionar Directores de Tienda ══ -->
+<div class="modal-back" id="modal-directores">
+  <div class="modal">
+    <h2 style="color:var(--bm-blue);margin-top:0">Directores de Tienda</h2>
+    <p style="font-size:.8rem;color:#777">Lista actual (<span id="dir-count">0</span>):</p>
+    <div id="dir-lista" style="font-size:.82rem;max-height:140px;overflow:auto;margin-bottom:12px"></div>
+    <label>Añadir nombres (uno por línea)</label>
+    <textarea id="dir-nuevos" placeholder="Nombre Apellido&#10;Otro Director"></textarea>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" onclick="guardarDirectoresNuevos()">Añadir</button>
+      <button class="btn btn-ghost" onclick="cerrarModalDirectores()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: gestionar Directores Regionales ══ -->
+<div class="modal-back" id="modal-directores-reg">
+  <div class="modal">
+    <h2 style="color:var(--bm-blue);margin-top:0">Directores Regionales</h2>
+    <p style="font-size:.8rem;color:#777">Lista actual (<span id="dirreg-count">0</span>):</p>
+    <div id="dirreg-lista" style="font-size:.82rem;max-height:140px;overflow:auto;margin-bottom:12px"></div>
+    <label>Añadir nombres (uno por línea)</label>
+    <textarea id="dirreg-nuevos" placeholder="Nombre Apellido&#10;Otro Director"></textarea>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" onclick="guardarDirectoresRegionalesNuevos()">Añadir</button>
+      <button class="btn btn-ghost" onclick="cerrarModalDirectoresRegionales()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: contraseña de administración (gestionar listas) ══ -->
+<div class="modal-back" id="modal-admin-pass">
+  <div class="modal" style="max-width:340px">
+    <h2 style="color:var(--bm-blue);margin-top:0">🔒 Acceso restringido</h2>
+    <p style="font-size:.82rem;color:#777;margin:0 0 12px">Introduce la contraseña para gestionar las listas de directores.</p>
+    <input type="password" id="admin-pass-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter') verificarAdminPass()">
+    <p class="setup-err" id="admin-pass-err" style="margin-top:8px">❌ Contraseña incorrecta</p>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" onclick="verificarAdminPass()">Entrar</button>
+      <button class="btn btn-ghost" onclick="cerrarModalAdminPass()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ver datos guardados de la visita ══ -->
+<div class="modal-back" id="modal-json">
+  <div class="modal" style="max-width:600px">
+    <h2 style="color:var(--bm-blue);margin-top:0">Datos guardados de esta visita</h2>
+    <pre id="json-contenido" style="white-space:pre-wrap;word-break:break-word;font-size:.78rem;max-height:60vh;overflow:auto;background:var(--bg);padding:10px;border-radius:8px;margin:0"></pre>
+    <div style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-json').classList.remove('show')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ CONSTANTES ══
+const TIENDAS = ["EIXAMPLE","HOSPITALET","SABADELL","SANT_ADRIA","SANT_BOI","SANT_JUST","GRAU",
+  "VALLADOLID","BENAVENTE","PALENCIA","ALCALA","ALCOBENDAS","ALCORCON","ATOCHA",
+  "GARCIA_NOBLEJAS","GETAFE","FUENLABRADA"];
+
+const CUSTOMER_JOURNEY_PUNTOS = [
+  {key:"parking", label:"Parking"},
+  {key:"entrada", label:"Entrada"},
+  {key:"recepcion", label:"Recepción"},
+  {key:"flujo_circulacion", label:"Flujo de circulación"},
+  {key:"disponibilidad_producto", label:"Disponibilidad de producto"},
+  {key:"atencion_comercial", label:"Atención comercial"},
+  {key:"paso_cajas", label:"Paso por cajas"},
+  {key:"carga", label:"Carga"},
+  {key:"salida", label:"Salida"},
+];
+
+let db=null, _ref,_onValue,_set,_push,_child;
+let visitaActualId=null;
+let directoresCache={};
+let directoresRegionalesCache={};
+
+function hoy(){ return new Date().toISOString().slice(0,10); }
+function showToast(msg,dur=2200){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(window._toastT); window._toastT=setTimeout(()=>t.classList.remove('show'),dur);
+}
+function ref(path){ return _ref(db, path); }
+
+// ══ POBLAR SELECTS FIJOS ══
+function poblarTiendas(){
+  const sel=document.getElementById('c-tienda');
+  sel.innerHTML='<option value="">Selecciona</option>'+TIENDAS.map(t=>`<option>${t}</option>`).join('');
+}
+document.getElementById('c-fecha').value = hoy();
+poblarTiendas();
+
+// ══ FIREBASE SETUP ══
+function savedCfg(){ try{ const c=localStorage.getItem('bm_protocolo_visita_firebase'); return c?JSON.parse(c):null; }catch(e){ return null; } }
+window.conectarFirebase=()=>{
+  const apiKey=document.getElementById('s-apikey').value.trim();
+  const dbURL=document.getElementById('s-dburl').value.trim();
+  const pid=document.getElementById('s-pid').value.trim();
+  const appId=document.getElementById('s-appid').value.trim();
+  const errEl=document.getElementById('setup-err');
+  if(!apiKey||!dbURL||!pid||!appId){ errEl.textContent='Rellena todos los campos.'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+  const cfg={apiKey,databaseURL:dbURL,projectId:pid,appId};
+  localStorage.setItem('bm_protocolo_visita_firebase',JSON.stringify(cfg));
+  iniciarFirebase(cfg);
+};
+function mostrarErrorSetup(msg){
+  const errEl=document.getElementById('setup-err');
+  errEl.textContent='❌ '+msg; errEl.style.display='block';
+  console.error('[Protocolo Visita Firebase]', msg);
+}
+async function iniciarFirebase(cfg){
+  let initializeApp, fbdb;
+  try{
+    ({ initializeApp } = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/app/+esm'));
+    fbdb = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/database/+esm');
+  }catch(e){
+    mostrarErrorSetup('No se pudo cargar el SDK de Firebase: '+e.message);
+    return;
+  }
+  _ref=fbdb.ref; _onValue=fbdb.onValue; _set=fbdb.set; _push=fbdb.push; _child=fbdb.child;
+
+  let app;
+  try{ app=initializeApp(cfg); }
+  catch(e){
+    if(e.code==='app/duplicate-app'){ localStorage.removeItem('bm_protocolo_visita_firebase'); location.reload(); return; }
+    mostrarErrorSetup('Error al inicializar: '+e.message);
+    localStorage.removeItem('bm_protocolo_visita_firebase');
+    return;
+  }
+  try{ db=fbdb.getDatabase(app); }
+  catch(e){
+    mostrarErrorSetup('Error de conexión: '+e.message+' — revisa la Database URL');
+    localStorage.removeItem('bm_protocolo_visita_firebase');
+    return;
+  }
+
+  document.getElementById('setup-overlay').style.display='none';
+
+  const connTimeout=setTimeout(()=>{
+    document.getElementById('ctxt').textContent='Sin respuesta — revisa URL/Reglas';
+  },8000);
+  _onValue(ref('.info/connected'), s=>{
+    clearTimeout(connTimeout);
+    const ok=s.val();
+    document.getElementById('cdot').classList.toggle('online', !!ok);
+    document.getElementById('ctxt').textContent = ok?'En línea':'Sin conexión';
+  });
+
+  _onValue(ref('directores'), s=>{
+    directoresCache = s.val()||{};
+    poblarDirectores();
+    renderListaDirectoresModal();
+  });
+  _onValue(ref('directoresRegionales'), s=>{
+    directoresRegionalesCache = s.val()||{};
+    poblarDirectoresRegionales();
+    renderListaDirectoresRegionalesModal();
+  });
+
+  comprobarVisitaPendiente();
+}
+
+// ══ RECUPERAR VISITA EN CURSO (si se cerró el navegador a mitad) ══
+function comprobarVisitaPendiente(){
+  let guardado=null;
+  try{ const raw=localStorage.getItem('bm_visita_en_curso'); guardado = raw?JSON.parse(raw):null; }catch(e){}
+  if(!guardado || !guardado.visitaId) return;
+  _onValue(ref(`visitas/${guardado.visitaId}/cabecera`), s=>{
+    const cab = s.val();
+    if(!cab){ borrarVisitaPendienteGuardada(); return; }
+    document.getElementById('banner-visita-info').textContent =
+      `${cab.tienda||'?'} · ${cab.director||'?'} · ${cab.fecha||'?'}`;
+    document.getElementById('banner-visita-pendiente').classList.remove('hidden');
+    window._visitaPendiente = guardado;
+  }, {onlyOnce:true});
+}
+window.descartarVisitaPendiente = function(){
+  borrarVisitaPendienteGuardada();
+  document.getElementById('banner-visita-pendiente').classList.add('hidden');
+};
+window.continuarVisitaPendiente = async function(){
+  const guardado = window._visitaPendiente;
+  if(!guardado) return;
+  await new Promise(resolve=>{
+    _onValue(ref(`visitas/${guardado.visitaId}`), s=>{ restaurarVisitaEnFormulario(s.val()||{}); resolve(); }, {onlyOnce:true});
+  });
+  visitaActualId = guardado.visitaId;
+  historialPantallas = ['pantalla-cabecera'];
+  document.getElementById('banner-visita-pendiente').classList.add('hidden');
+  document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(guardado.pantalla).classList.remove('hidden');
+  window.scrollTo(0,0);
+};
+
+// Nota importante: estas funciones de "restaurar" NUNCA deben llamar a las funciones
+// setX/guardarX normales de la app — esas releen el formulario entero y lo vuelven a
+// guardar, y si se llaman ANTES de rellenar los campos de texto de al lado, guardarían
+// esos campos como vacíos, borrando en Firebase lo que se estaba intentando recuperar.
+// Por eso aquí se toca el DOM (clases visuales + .value) directamente, sin disparar guardado.
+function restaurarBloqueSiNo(items, pathBase, datosGrupo){
+  if(!datosGrupo) return;
+  items.forEach(it=>{
+    const d = datosGrupo[it.key];
+    if(!d) return;
+    const elSi = document.getElementById(`blq-${pathBase}-${it.key}-si`);
+    const elNo = document.getElementById(`blq-${pathBase}-${it.key}-no`);
+    if(!elSi || !elNo) return;
+    elSi.classList.remove('sel-si','sel-no');
+    elNo.classList.remove('sel-si','sel-no');
+    if(d.cumple===true) elSi.classList.add(it.siEsBueno ? 'sel-no' : 'sel-si');
+    if(d.cumple===false) elNo.classList.add(it.siEsBueno ? 'sel-si' : 'sel-no');
+    elSi.dataset.valor = String(d.cumple);
+    const esMalo = it.siEsBueno ? (d.cumple===false) : (d.cumple===true);
+    const extraEl = document.getElementById(`blq-${pathBase}-${it.key}-extra`);
+    if(extraEl) extraEl.classList.toggle('show', esMalo);
+    const planEl = document.getElementById(`blq-${pathBase}-${it.key}-plan`);
+    const fechaEl = document.getElementById(`blq-${pathBase}-${it.key}-fecha`);
+    if(planEl) planEl.value = d.plan || '';
+    if(fechaEl) fechaEl.value = d.fecha || '';
+  });
+}
+function restaurarSiNoSimple(idSi, idNo, valor, siEsBueno){
+  const elSi=document.getElementById(idSi), elNo=document.getElementById(idNo);
+  if(!elSi||!elNo) return;
+  elSi.classList.remove('sel-si','sel-no'); elNo.classList.remove('sel-si','sel-no');
+  if(valor===true) elSi.classList.add(siEsBueno?'sel-no':'sel-si');
+  if(valor===false) elNo.classList.add(siEsBueno?'sel-si':'sel-no');
+}
+
+function restaurarVisitaEnFormulario(datos){
+  const cab = datos.cabecera || {};
+  document.getElementById('c-director').value = cab.director||'';
+  document.getElementById('c-tienda').value = cab.tienda||'';
+  document.getElementById('c-tipovisita').value = cab.tipoVisita||'';
+  document.getElementById('c-directortienda').value = cab.directorTienda||'';
+  document.getElementById('c-fecha').value = cab.fecha||hoy();
+  document.getElementById('cj-contexto').textContent = `${cab.tienda||''} · ${cab.director||''} · ${cab.fecha||''}`;
+
+  const cliente = datos.cliente || {};
+
+  const cj = cliente.customerJourney || {};
+  CUSTOMER_JOURNEY_PUNTOS.forEach(p=>{
+    const d = cj[p.key]; if(!d) return;
+    const queEl = document.getElementById(`cj-${p.key}-que`); if(queEl) queEl.value = d.que||'';
+    const cuandoEl = document.getElementById(`cj-${p.key}-cuando`); if(cuandoEl) cuandoEl.value = d.cuando||'';
+    restaurarSiNoSimple(`cj-${p.key}-si`, `cj-${p.key}-no`, d.ejeMejora, false);
+    const extraEl = document.getElementById(`cj-${p.key}-extra`); if(extraEl) extraEl.classList.toggle('show', d.ejeMejora===true);
+  });
+
+  const tc = cliente.tiempoCompra || {};
+  CLIENTE_TIPOS.forEach(ct=>{
+    const d = tc[ct.key]; if(!d) return;
+    const hor = d.horario||{};
+    const e1=document.getElementById(`ct-${ct.key}-entrada`); if(e1) e1.value=hor.horaEntrada||'';
+    const e2=document.getElementById(`ct-${ct.key}-salida`); if(e2) e2.value=hor.horaSalida||'';
+    const nps = d.nps;
+    if(nps && nps.tipoCliente==='Compró'){
+      document.getElementById(`ct-${ct.key}-nota`).value = nps.notaRecomendacion||'';
+      NPS_VALORACIONES.forEach(v=>{ const el=document.getElementById(`ct-${ct.key}-val-${v.key}`); if(el) el.value=(nps.valoraciones||{})[v.key]||''; });
+      document.getElementById(`ct-${ct.key}-mejorar`).value = nps.mejorar||'';
+      restaurarSiNoSimple(`ct-${ct.key}-compro-si`, `ct-${ct.key}-compro-no`, true, true);
+      restaurarSiNoSimple(`ct-${ct.key}-primera-si`, `ct-${ct.key}-primera-no`, nps.primeraCompra, false);
+      document.getElementById(`ct-${ct.key}-bloque-compro`).classList.remove('hidden');
+      document.getElementById(`ct-${ct.key}-bloque-nocompro`).classList.add('hidden');
+    } else if(nps && nps.tipoCliente==='No compró'){
+      document.getElementById(`ct-${ct.key}-motivo`).value = nps.motivo||'';
+      document.getElementById(`ct-${ct.key}-porque`).value = nps.porque||'';
+      document.getElementById(`ct-${ct.key}-probvolver`).value = nps.probabilidadVolver||'';
+      document.getElementById(`ct-${ct.key}-quemejorar-nc`).value = nps.queMejorar||'';
+      restaurarSiNoSimple(`ct-${ct.key}-compro-si`, `ct-${ct.key}-compro-no`, false, true);
+      restaurarSiNoSimple(`ct-${ct.key}-ayuda-si`, `ct-${ct.key}-ayuda-no`, nps.encontroAyuda, true);
+      document.getElementById(`ct-${ct.key}-bloque-compro`).classList.add('hidden');
+      document.getElementById(`ct-${ct.key}-bloque-nocompro`).classList.remove('hidden');
+    }
+  });
+
+  restaurarBloqueSiNo(CAPTACION_ITEMS, 'captacion', cliente.captacion);
+  if(cliente.captacion && cliente.captacion.tasaConversion){
+    const t=cliente.captacion.tasaConversion;
+    document.getElementById('captacion-tasa').value=t.valor||'';
+    document.getElementById('captacion-tasa-plan').value=t.plan||'';
+    document.getElementById('captacion-tasa-fecha').value=t.fecha||'';
+  }
+
+  if(cliente.competencia){
+    renderCompetencia();
+    const claves = Object.keys(cliente.competencia).map(Number).sort((a,b)=>a-b);
+    claves.forEach(idx=>{
+      while(competenciaContador<=idx) agregarCompetidor();
+      const d = cliente.competencia[idx];
+      document.getElementById(`comp-${idx}-competidor`).value = d.competidor||'';
+      document.getElementById(`comp-${idx}-observaciones`).value = d.observaciones||'';
+      document.getElementById(`comp-${idx}-acciones`).value = d.acciones||'';
+    });
+  }
+
+  if(cliente.transporte){
+    const t=cliente.transporte;
+    document.getElementById('tr-tipocliente').value=t.tipoCliente||'';
+    TRANSPORTE_VALORACIONES.forEach(v=>{ const el=document.getElementById(`tr-val-${v.key}`); if(el) el.value=(t.valoraciones||{})[v.key]||''; });
+    document.getElementById('tr-incidencia-detalle').value=t.incidenciaDetalle||'';
+    document.getElementById('tr-nps').value=t.npsTransporte||'';
+    document.getElementById('tr-quemejorar').value=t.queMejorar||'';
+    const hayIncidencia = !t.entregaSinIncidencias;
+    restaurarSiNoSimple('tr-incidencia-si','tr-incidencia-no', !hayIncidencia, true);
+    const extraTr = document.getElementById('tr-incidencia-extra'); if(extraTr) extraTr.classList.toggle('show', hayIncidencia);
+  }
+
+  if(cliente.cartera){
+    const m = cliente.cartera.metricas||{};
+    if(m.sinCompra){
+      document.getElementById('cart-sincompra-num').value=m.sinCompra.numero||'';
+      document.getElementById('cart-sincompra-plan').value=m.sinCompra.plan||'';
+      document.getElementById('cart-sincompra-fecha').value=m.sinCompra.fecha||'';
+    }
+    document.getElementById('cart-consumocredito').value=m.consumoCredito||'';
+    if(m.pocasSecciones){
+      document.getElementById('cart-pocassecciones').value=m.pocasSecciones.valor||'';
+      document.getElementById('cart-pocassecciones-plan').value=m.pocasSecciones.plan||'';
+      document.getElementById('cart-pocassecciones-fecha').value=m.pocasSecciones.fecha||'';
+    }
+    document.getElementById('cart-riesgo').value=m.clientesRiesgo||'';
+    document.getElementById('cart-50pct').value=m.clientes50pct||'';
+    const cp = cliente.cartera.clientePrincipal;
+    if(cp){
+      document.getElementById('cp-nombre').value=cp.nombre||'';
+      document.getElementById('cp-obra').value=cp.obra||'';
+      document.getElementById('cp-observaciones').value=cp.observaciones||'';
+      document.getElementById('cp-acciones').value=cp.acciones||'';
+    }
+  }
+
+  const sec = datos.secciones || {};
+  if(sec.rupturas){
+    const r=sec.rupturas;
+    document.getElementById('sec-rupturas-pct').value=r.porcentaje||'';
+    document.getElementById('sec-rupturas-plan').value=r.planTrabajo||'';
+    document.getElementById('sec-rupturas-cuando').value=r.cuandoTrabajo||'';
+    document.getElementById('sec-familiascriticas').value=r.familiasCriticas||'';
+    document.getElementById('sec-familiascriticas-plan').value=r.planAccion||'';
+    document.getElementById('sec-familiascriticas-cuando').value=r.cuandoAccion||'';
+  }
+  FAMILIAS_LINEAL.forEach(f=>{
+    const d = (sec.familias||{})[f.key]; if(!d) return;
+    ESCALA_FAMILIA_ATRIBUTOS.forEach(a=>{ const el=document.getElementById(`fam-${f.key}-${a.key}`); if(el) el.value=d[a.key]||''; });
+    const planEl=document.getElementById(`fam-${f.key}-plan`); if(planEl) planEl.value=d.plan||'';
+    const cuandoEl=document.getElementById(`fam-${f.key}-cuando`); if(cuandoEl) cuandoEl.value=d.cuando||'';
+  });
+  restaurarBloqueSiNo(IMPLANTACION_ITEMS, 'implantacion', sec.implantacion);
+
+  const ges = datos.gestion || {};
+  restaurarBloqueSiNo([{key:'productividad', siEsBueno:true}], 'gestionProductividad', ges.productividad);
+  restaurarBloqueSiNo([{key:'excesos'},{key:'defecto'}], 'gestionHoras', ges.horas);
+  if(ges.horas){
+    const h=ges.horas;
+    if(h.excesosPersonas) document.getElementById('hx-excesos-personas').value=h.excesosPersonas.valor||'';
+    if(h.excesosHoras) document.getElementById('hx-excesos-horas').value=h.excesosHoras.valor||'';
+    if(h.defectoPersonas) document.getElementById('hx-defecto-personas').value=h.defectoPersonas.valor||'';
+    if(h.defectoHoras) document.getElementById('hx-defecto-horas').value=h.defectoHoras.valor||'';
+  }
+  if(ges.indiceTienda){
+    document.getElementById('ges-indice').value=ges.indiceTienda.valor||'';
+    document.getElementById('ges-indice-plan').value=ges.indiceTienda.plan||'';
+    document.getElementById('ges-indice-cuando').value=ges.indiceTienda.cuando||'';
+  }
+  restaurarBloqueSiNo([{key:'recursosAfluencia', siEsBueno:true}], 'gestionRecursos', ges.recursos);
+  restaurarBloqueSiNo(DEPARTAMENTOS.map(d=>({key:d,siEsBueno:true})), 'gestionHorasPunta', ges.horasPunta);
+  if(ges.horasPunta) DEPARTAMENTOS.forEach(d=>{ const n=ges.horasPunta[`${d}Numero`]; if(n){ const el=document.getElementById(`hf-punta-${d}-num`); if(el) el.value=n.valor||''; } });
+  restaurarBloqueSiNo(DEPARTAMENTOS.map(d=>({key:d,siEsBueno:true})), 'gestionHorasValle', ges.horasValle);
+  if(ges.horasValle) DEPARTAMENTOS.forEach(d=>{ const n=ges.horasValle[`${d}Numero`]; if(n){ const el=document.getElementById(`hf-valle-${d}-num`); if(el) el.value=n.valor||''; } });
+  restaurarBloqueSiNo([{key:'epis',siEsBueno:true},{key:'estibacion',siEsBueno:true},{key:'cargaClientes',siEsBueno:true},{key:'manipulacion',siEsBueno:true},{key:'ordenLimpieza',siEsBueno:true}], 'gestionSeguridad', ges.seguridad);
+  restaurarBloqueSiNo([{key:'tienda',siEsBueno:true},{key:'construccion',siEsBueno:true},{key:'madera',siEsBueno:true},{key:'pintura',siEsBueno:true},{key:'ceramica',siEsBueno:true},{key:'sanitario',siEsBueno:true},{key:'electricidad',siEsBueno:true},{key:'fontaneria',siEsBueno:true},{key:'cocinas',siEsBueno:true},{key:'totalGeneral',siEsBueno:true}], 'gestionVentas', ges.ventas);
+  restaurarBloqueSiNo([{key:'preciosForzados',siEsBueno:true},{key:'cheques',siEsBueno:true}], 'gestionPrecios', ges.precios);
+  restaurarBloqueSiNo([{key:'demarca',siEsBueno:true},{key:'inventariosRotativos',siEsBueno:true},{key:'fiabilidadStock',siEsBueno:true}], 'gestionDemarca', ges.demarcaStock);
+  restaurarBloqueSiNo([{key:'pendientes'},{key:'vencidos'},{key:'criticos'}], 'gestionWorkflows', ges.workflows);
+}
+// Config fija del proyecto — así los directores no tienen que rellenar nada, se conecta solo.
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBI_-WthIX8gVOAprrbsMYaohVYjfMPQbM",
+  databaseURL: "https://bigmat-protocolo-visita-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "bigmat-protocolo-visita",
+  appId: "1:550029945101:web:e52d621c118dd9ac816844",
+};
+(function(){
+  let cfg=null;
+  try{ cfg=savedCfg(); }catch(e){}
+  if(!cfg) cfg = DEFAULT_FIREBASE_CONFIG;
+  document.getElementById('setup-overlay').style.display='none';
+  iniciarFirebase(cfg);
+})();
+
+// ══ DIRECTORES (lista pequeña, cargable desde la propia app) ══
+function poblarDirectores(){
+  const sel=document.getElementById('c-directortienda');
+  const nombres=Object.values(directoresCache).map(d=>d.nombre).sort();
+  sel.innerHTML='<option value="">Selecciona</option>'+nombres.map(n=>`<option>${n}</option>`).join('');
+}
+window.abrirModalDirectores=()=>{ document.getElementById('modal-directores').classList.add('show'); };
+window.cerrarModalDirectores=()=>{ document.getElementById('modal-directores').classList.remove('show'); };
+function renderListaDirectoresModal(){
+  const nombres=Object.values(directoresCache).map(d=>d.nombre).sort();
+  document.getElementById('dir-count').textContent=nombres.length;
+  document.getElementById('dir-lista').innerHTML = nombres.map(n=>`<div>• ${n}</div>`).join('') || '<em>Sin directores todavía</em>';
+}
+window.guardarDirectoresNuevos=async()=>{
+  const txt=document.getElementById('dir-nuevos').value.trim();
+  if(!txt) return;
+  const nombres=txt.split('\n').map(n=>n.trim()).filter(Boolean);
+  for(const nombre of nombres){
+    const nuevaRef=_push(ref('directores'));
+    await _set(nuevaRef, {nombre});
+  }
+  document.getElementById('dir-nuevos').value='';
+  showToast(`${nombres.length} director(es) añadido(s)`);
+};
+
+// ══ DIRECTORES REGIONALES ══
+function poblarDirectoresRegionales(){
+  const sel=document.getElementById('c-director');
+  const valorPrevio = sel.value;
+  const nombres=Object.values(directoresRegionalesCache).map(d=>d.nombre).sort();
+  sel.innerHTML='<option value="">Selecciona</option>'+nombres.map(n=>`<option>${n}</option>`).join('');
+  if(valorPrevio) sel.value = valorPrevio;
+}
+window.abrirModalDirectoresRegionales=()=>{ document.getElementById('modal-directores-reg').classList.add('show'); };
+window.cerrarModalDirectoresRegionales=()=>{ document.getElementById('modal-directores-reg').classList.remove('show'); };
+function renderListaDirectoresRegionalesModal(){
+  const nombres=Object.values(directoresRegionalesCache).map(d=>d.nombre).sort();
+  document.getElementById('dirreg-count').textContent=nombres.length;
+  document.getElementById('dirreg-lista').innerHTML = nombres.map(n=>`<div>• ${n}</div>`).join('') || '<em>Sin directores todavía</em>';
+}
+window.guardarDirectoresRegionalesNuevos=async()=>{
+  const txt=document.getElementById('dirreg-nuevos').value.trim();
+  if(!txt) return;
+  const nombres=txt.split('\n').map(n=>n.trim()).filter(Boolean);
+  for(const nombre of nombres){
+    const nuevaRef=_push(ref('directoresRegionales'));
+    await _set(nuevaRef, {nombre});
+  }
+  document.getElementById('dirreg-nuevos').value='';
+  showToast(`${nombres.length} Director(es) Regional(es) añadido(s)`);
+};
+
+// ══ CONTRASEÑA DE ADMINISTRACIÓN (solo filtro de cliente, no seguridad real) ══
+const ADMIN_PASSWORD = 'retail';
+let adminAutenticado = false;
+let _accionPendienteAdmin = null;
+window.pedirPasswordAdmin = function(accion){
+  if(adminAutenticado){ accion(); return; }
+  _accionPendienteAdmin = accion;
+  document.getElementById('admin-pass-input').value='';
+  document.getElementById('admin-pass-err').style.display='none';
+  document.getElementById('modal-admin-pass').classList.add('show');
+};
+window.cerrarModalAdminPass = function(){
+  document.getElementById('modal-admin-pass').classList.remove('show');
+  _accionPendienteAdmin = null;
+};
+window.verificarAdminPass = function(){
+  const pass = document.getElementById('admin-pass-input').value;
+  if(pass === ADMIN_PASSWORD){
+    adminAutenticado = true;
+    document.getElementById('modal-admin-pass').classList.remove('show');
+    const accion = _accionPendienteAdmin;
+    _accionPendienteAdmin = null;
+    if(accion) accion();
+  } else {
+    document.getElementById('admin-pass-err').style.display='block';
+  }
+};
+
+// ══ PANTALLA 1 → 2 ══
+window.iniciarVisita=async()=>{
+  const director=document.getElementById('c-director').value;
+  const fecha=document.getElementById('c-fecha').value;
+  const tienda=document.getElementById('c-tienda').value;
+  const tipoVisita=document.getElementById('c-tipovisita').value;
+  const directorTienda=document.getElementById('c-directortienda').value.trim();
+  const errEl=document.getElementById('cabecera-err');
+
+  if(!director||!fecha||!tienda||!tipoVisita){
+    errEl.textContent='Completa Director, Fecha, Tienda y Tipo de visita antes de continuar.';
+    errEl.style.display='block';
+    return;
+  }
+  if(!db){
+    errEl.textContent='Firebase no está conectado todavía — espera al punto verde "En línea" arriba antes de continuar.';
+    errEl.style.display='block';
+    return;
+  }
+  errEl.style.display='none';
+
+  try{
+    const nuevaRef=_push(ref('visitas'));
+    visitaActualId=nuevaRef.key;
+    await _set(nuevaRef, {
+      cabecera:{director,fecha,tienda,tipoVisita,directorTienda,creado:new Date().toISOString()}
+    });
+    showToast('Visita creada — ya está guardada');
+  }catch(e){
+    errEl.textContent='No se pudo guardar en Firebase: '+e.message;
+    errEl.style.display='block';
+    return;
+  }
+
+  document.getElementById('cj-contexto').textContent = `${tienda} · ${director} · ${fecha}`;
+  irA('pantalla-cj');
+};
+
+// ══ PANTALLA 2: CUSTOMER JOURNEY ══
+function renderCustomerJourney(){
+  const cont=document.getElementById('cj-lista');
+  cont.innerHTML = CUSTOMER_JOURNEY_PUNTOS.map(p=>`
+    <div class="card cj-block" id="cj-${p.key}">
+      <h3>${p.label}</h3>
+      <label style="margin-top:0">¿Hay ejes de mejora?</label>
+      <div class="sino">
+        <button onclick="setEjeMejora('${p.key}', true)" id="cj-${p.key}-si">Sí</button>
+        <button onclick="setEjeMejora('${p.key}', false)" id="cj-${p.key}-no">No</button>
+      </div>
+      <div class="cj-extra" id="cj-${p.key}-extra">
+        <label>¿Qué?</label>
+        <textarea id="cj-${p.key}-que" onblur="guardarCJTexto('${p.key}')"></textarea>
+        <label>¿Cuándo?</label>
+        <input type="date" id="cj-${p.key}-cuando" onchange="guardarCJTexto('${p.key}')">
+      </div>
+      <span class="saved-badge" id="cj-${p.key}-badge">✓ Guardado</span>
+    </div>
+  `).join('');
+}
+renderCustomerJourney();
+
+async function guardarPunto(key, data){
+  await _set(ref(`visitas/${visitaActualId}/cliente/customerJourney/${key}`), data);
+  const badge=document.getElementById(`cj-${key}-badge`);
+  badge.classList.add('show');
+  setTimeout(()=>badge.classList.remove('show'), 1500);
+}
+
+window.setEjeMejora=(key, valor)=>{
+  document.getElementById(`cj-${key}-si`).classList.toggle('sel-si', valor===true);
+  document.getElementById(`cj-${key}-no`).classList.toggle('sel-no', valor===false);
+  document.getElementById(`cj-${key}-extra`).classList.toggle('show', valor===true);
+  guardarPunto(key, {ejeMejora: valor});
+};
+
+window.guardarCJTexto=(key)=>{
+  const que=document.getElementById(`cj-${key}-que`).value;
+  const cuando=document.getElementById(`cj-${key}-cuando`).value;
+  guardarPunto(key, {ejeMejora:true, que, cuando});
+};
+
+window.verJSON=()=>{
+  if(!visitaActualId){ showToast('Todavía no hay ninguna visita en curso.'); return; }
+  _onValue(ref(`visitas/${visitaActualId}`), s=>{
+    document.getElementById('json-contenido').textContent = JSON.stringify(s.val(), null, 2);
+    document.getElementById('modal-json').classList.add('show');
+  }, {onlyOnce:true});
+};
+
+// ══ NAVEGACIÓN GENÉRICA (con historial para "Atrás") ══
+let historialPantallas = [];
+window.irA = function(destId){
+  const actual = document.querySelector('main > section:not(.hidden)');
+  if(actual && actual.id !== destId) historialPantallas.push(actual.id);
+  document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(destId).classList.remove('hidden');
+  window.scrollTo(0,0);
+  guardarUbicacionActual(destId);
+};
+function guardarUbicacionActual(pantallaId){
+  try{
+    if(pantallaId==='pantalla-fin-gestion'){ borrarVisitaPendienteGuardada(); return; } // protocolo completo, nada que retomar
+    if(visitaActualId && pantallaId!=='pantalla-cabecera'){
+      localStorage.setItem('bm_visita_en_curso', JSON.stringify({visitaId: visitaActualId, pantalla: pantallaId}));
+    }
+  }catch(e){}
+}
+function borrarVisitaPendienteGuardada(){
+  try{ localStorage.removeItem('bm_visita_en_curso'); }catch(e){}
+}
+window.irAtras = function(){
+  const prev = historialPantallas.pop();
+  if(!prev){ showToast('No hay pantalla anterior'); return; }
+  document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(prev).classList.remove('hidden');
+  window.scrollTo(0,0);
+};
+
+// ══ GUARDADO GENÉRICO (con badge opcional) ══
+async function guardarCampo(pathSuffix, data, badgeId){
+  try{
+    await _set(ref(`visitas/${visitaActualId}/${pathSuffix}`), data);
+    if(badgeId){
+      const b=document.getElementById(badgeId);
+      if(b){ b.textContent='✓ Guardado'; b.style.color=''; b.classList.add('show'); setTimeout(()=>b.classList.remove('show'),1500); }
+    }
+  }catch(e){
+    if(badgeId){
+      const b=document.getElementById(badgeId);
+      if(b){ b.textContent='⚠ Error: '+e.message; b.style.color='var(--bm-red)'; b.classList.add('show'); }
+    }
+    showToast('⚠ Error al guardar: '+e.message, 4000);
+  }
+}
+
+function poblarEscala010(sel){
+  sel.innerHTML = '<option value="">Selecciona</option>' + Array.from({length:11},(_,i)=>`<option value="${i}">${i}</option>`).join('');
+}
+const ESCALA_VALORACION = ['Muy malo','Malo','Normal','Bueno','Excelente'];
+
+// ══ BLOQUE GENÉRICO Sí/No + Plan de acción + Cuándo (reutilizable en Captación/Cartera/etc.) ══
+// it.siEsBueno=true -> "Sí" es la respuesta buena (verde) y "No" la mala (rojo, muestra Plan de acción).
+// Por defecto (sin siEsBueno) es al revés: "Sí" = problema (rojo), como en Customer Journey.
+function renderBloqueSiNo(items, containerId, pathBase, firebaseBase){
+  const fb = firebaseBase || `cliente/${pathBase}`;
+  const cont=document.getElementById(containerId);
+  cont.innerHTML = items.map(it=>`
+    <div class="card" data-fbbase="${fb}">
+      <h3 style="margin:0 0 10px;font-size:.9rem">${it.label}</h3>
+      ${it.extraHtml||''}
+      <div class="sino">
+        <button id="blq-${pathBase}-${it.key}-si" onclick="setBloqueSiNo('${pathBase}','${it.key}',true,${!!it.siEsBueno})">Sí</button>
+        <button id="blq-${pathBase}-${it.key}-no" onclick="setBloqueSiNo('${pathBase}','${it.key}',false,${!!it.siEsBueno})">No</button>
+      </div>
+      <div class="cj-extra" id="blq-${pathBase}-${it.key}-extra">
+        <label>Plan de acción</label>
+        <textarea id="blq-${pathBase}-${it.key}-plan" onblur="guardarBloqueSiNo('${pathBase}','${it.key}')"></textarea>
+        <label>¿Cuándo?</label>
+        <input type="date" id="blq-${pathBase}-${it.key}-fecha" onchange="guardarBloqueSiNo('${pathBase}','${it.key}')">
+      </div>
+      <span class="saved-badge" id="blq-${pathBase}-${it.key}-badge">✓ Guardado</span>
+    </div>
+  `).join('');
+}
+window.setBloqueSiNo = function(pathBase, key, valor, siEsBueno){
+  const elSi = document.getElementById(`blq-${pathBase}-${key}-si`);
+  const elNo = document.getElementById(`blq-${pathBase}-${key}-no`);
+  elSi.classList.remove('sel-si','sel-no');
+  elNo.classList.remove('sel-si','sel-no');
+  if(valor===true) elSi.classList.add(siEsBueno ? 'sel-no' : 'sel-si');
+  if(valor===false) elNo.classList.add(siEsBueno ? 'sel-si' : 'sel-no');
+  elSi.dataset.valor = String(valor);
+  const esMalo = siEsBueno ? (valor===false) : (valor===true);
+  document.getElementById(`blq-${pathBase}-${key}-extra`).classList.toggle('show', esMalo);
+  guardarBloqueSiNo(pathBase, key, valor);
+};
+window.guardarBloqueSiNo = async function(pathBase, key, valorForzado){
+  let valor = valorForzado;
+  const elSi = document.getElementById(`blq-${pathBase}-${key}-si`);
+  if(valor===undefined){
+    const raw = elSi.dataset.valor;
+    if(raw===undefined) return;
+    valor = raw === 'true';
+  }
+  const fb = elSi.closest('[data-fbbase]').dataset.fbbase;
+  const plan = document.getElementById(`blq-${pathBase}-${key}-plan`).value;
+  const fecha = document.getElementById(`blq-${pathBase}-${key}-fecha`).value;
+  await guardarCampo(`${fb}/${key}`, {cumple:valor, plan, fecha}, `blq-${pathBase}-${key}-badge`);
+};
+
+// ══ CLIENTE DRIVE / TIENDA / MIXTO — hora + NPS de cada uno, uno detrás de otro ══
+const NPS_VALORACIONES = [
+  {key:'facilidadProducto', label:'Facilidad para encontrar el producto'},
+  {key:'atencionEquipo', label:'Atención del equipo'},
+  {key:'tiempoEsperaCaja', label:'Tiempo de espera en caja'},
+  {key:'disponibilidadProducto', label:'Disponibilidad del producto'},
+  {key:'precio', label:'Precio'},
+];
+const CLIENTE_TIPOS = [
+  {key:'drive', label:'Cliente Drive', siguiente:'pantalla-ct-tienda'},
+  {key:'tienda', label:'Cliente Tienda', siguiente:'pantalla-ct-mixto'},
+  {key:'mixto', label:'Cliente Mixto', siguiente:'pantalla-captacion'},
+];
+function construirClienteTipo(cfg){
+  const {key, label, siguiente} = cfg;
+  const cont = document.getElementById(`ct-${key}-container`);
+  cont.innerHTML = `
+    <div class="card">
+      <h2>3. ${label}</h2>
+      <p style="font-size:.78rem;color:#777;margin-top:-6px">Si no aplica este tipo de cliente en esta visita, puedes dejarlo en blanco y pulsar Continuar.</p>
+      <div class="row">
+        <div><label style="margin-top:0">Hora entrada</label><input type="time" id="ct-${key}-entrada" onchange="guardarCTHora('${key}')"></div>
+        <div><label style="margin-top:0">Hora salida</label><input type="time" id="ct-${key}-salida" onchange="guardarCTHora('${key}')"></div>
+      </div>
+    </div>
+    <div class="card">
+      <label style="margin-top:0">¿El cliente compró?</label>
+      <div class="sino">
+        <button id="ct-${key}-compro-si" onclick="setCTCompro('${key}',true)">Sí compró</button>
+        <button id="ct-${key}-compro-no" onclick="setCTCompro('${key}',false)">No compró</button>
+      </div>
+    </div>
+    <div id="ct-${key}-bloque-compro" class="hidden">
+      <div class="card">
+        <label style="margin-top:0">Nota de recomendación (0-10)</label>
+        <select id="ct-${key}-nota" onchange="guardarCTNPS('${key}')"></select>
+        <div id="ct-${key}-valoraciones"></div>
+        <label>¿Es la primera vez que compra aquí?</label>
+        <div class="sino">
+          <button id="ct-${key}-primera-si" onclick="setCTPrimera('${key}',true)">Sí</button>
+          <button id="ct-${key}-primera-no" onclick="setCTPrimera('${key}',false)">No</button>
+        </div>
+        <label>Si pudiera mejorar una sola cosa de esta tienda, ¿cuál sería?</label>
+        <textarea id="ct-${key}-mejorar" onblur="guardarCTNPS('${key}')"></textarea>
+      </div>
+    </div>
+    <div id="ct-${key}-bloque-nocompro" class="hidden">
+      <div class="card">
+        <label style="margin-top:0">¿Cuál fue el motivo principal?</label>
+        <textarea id="ct-${key}-motivo" onblur="guardarCTNPS('${key}')"></textarea>
+        <label>¿Por qué?</label>
+        <textarea id="ct-${key}-porque" onblur="guardarCTNPS('${key}')"></textarea>
+        <label>¿Qué probabilidad hay de que vuelva a visitarnos?</label>
+        <input type="text" id="ct-${key}-probvolver" onblur="guardarCTNPS('${key}')">
+        <label>¿Qué tendríamos que mejorar para que hoy hubiera comprado?</label>
+        <textarea id="ct-${key}-quemejorar-nc" onblur="guardarCTNPS('${key}')"></textarea>
+        <label>¿Encontró ayuda cuando la necesitó?</label>
+        <div class="sino">
+          <button id="ct-${key}-ayuda-si" onclick="setCTAyuda('${key}',true)">Sí</button>
+          <button id="ct-${key}-ayuda-no" onclick="setCTAyuda('${key}',false)">No</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('${siguiente}')">Continuar ▸</button>
+    </div>
+  `;
+  poblarEscala010(document.getElementById(`ct-${key}-nota`));
+  document.getElementById(`ct-${key}-valoraciones`).innerHTML = NPS_VALORACIONES.map(v=>`
+    <label>${v.label}</label>
+    <select id="ct-${key}-val-${v.key}" onchange="guardarCTNPS('${key}')">
+      <option value="">Selecciona</option>
+      ${ESCALA_VALORACION.map(o=>`<option>${o}</option>`).join('')}
+    </select>
+  `).join('');
+}
+CLIENTE_TIPOS.forEach(construirClienteTipo);
+
+window.guardarCTHora = async function(key){
+  const entrada=document.getElementById(`ct-${key}-entrada`).value;
+  const salida=document.getElementById(`ct-${key}-salida`).value;
+  await guardarCampo(`cliente/tiempoCompra/${key}/horario`, {horaEntrada:entrada, horaSalida:salida});
+};
+window.setCTCompro = function(key, compro){
+  // Sí compró = verde (buena noticia), No compró = rojo (mala noticia) — al revés del Sí/No por defecto
+  document.getElementById(`ct-${key}-compro-si`).classList.toggle('sel-no', compro===true);
+  document.getElementById(`ct-${key}-compro-no`).classList.toggle('sel-si', compro===false);
+  document.getElementById(`ct-${key}-bloque-compro`).classList.toggle('hidden', !compro);
+  document.getElementById(`ct-${key}-bloque-nocompro`).classList.toggle('hidden', compro!==false);
+  guardarCTNPS(key);
+};
+window.setCTPrimera = function(key, v){
+  document.getElementById(`ct-${key}-primera-si`).classList.toggle('sel-si', v===true);
+  document.getElementById(`ct-${key}-primera-no`).classList.toggle('sel-no', v===false);
+  guardarCTNPS(key);
+};
+window.setCTAyuda = function(key, v){
+  // Sí encontró ayuda = verde (bueno), No = rojo (malo)
+  document.getElementById(`ct-${key}-ayuda-si`).classList.toggle('sel-no', v===true);
+  document.getElementById(`ct-${key}-ayuda-no`).classList.toggle('sel-si', v===false);
+  guardarCTNPS(key);
+};
+window.guardarCTNPS = async function(key){
+  const compro = document.getElementById(`ct-${key}-compro-si`).classList.contains('sel-no');
+  const noCompro = document.getElementById(`ct-${key}-compro-no`).classList.contains('sel-si');
+  if(!compro && !noCompro) return;
+  if(compro){
+    const valoraciones={};
+    NPS_VALORACIONES.forEach(v=>{ valoraciones[v.key]=document.getElementById(`ct-${key}-val-${v.key}`).value; });
+    await guardarCampo(`cliente/tiempoCompra/${key}/nps`, {
+      tipoCliente:'Compró',
+      notaRecomendacion: document.getElementById(`ct-${key}-nota`).value,
+      valoraciones,
+      primeraCompra: document.getElementById(`ct-${key}-primera-si`).classList.contains('sel-si'),
+      mejorar: document.getElementById(`ct-${key}-mejorar`).value
+    });
+  } else {
+    await guardarCampo(`cliente/tiempoCompra/${key}/nps`, {
+      tipoCliente:'No compró',
+      motivo: document.getElementById(`ct-${key}-motivo`).value,
+      porque: document.getElementById(`ct-${key}-porque`).value,
+      probabilidadVolver: document.getElementById(`ct-${key}-probvolver`).value,
+      queMejorar: document.getElementById(`ct-${key}-quemejorar-nc`).value,
+      encontroAyuda: document.getElementById(`ct-${key}-ayuda-si`).classList.contains('sel-no')
+    });
+  }
+};
+
+// ══ CAPTACIÓN ══
+const CAPTACION_ITEMS = [
+  {key:'cheques', label:'¿Cumple con el objetivo de cheques de captación entregados semanalmente?', siEsBueno:true},
+  {key:'creceSemana1', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -1)', siEsBueno:true},
+  {key:'creceSemana2', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -2)', siEsBueno:true},
+  {key:'creceSemana3', label:'¿Crece el número de clientes respecto a la semana anterior? (semana -3)', siEsBueno:true},
+];
+function renderCaptacion(){
+  renderBloqueSiNo(CAPTACION_ITEMS, 'captacion-lista', 'captacion');
+  document.getElementById('captacion-lista').insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem">Tasa de conversión de los cheques de captación</h3>
+      <select id="captacion-tasa" onchange="guardarCaptacionTasa()">
+        <option value="">Selecciona</option>
+        <option>Mejor</option>
+        <option>Igual</option>
+        <option>Peor</option>
+      </select>
+      <label>Plan de acción</label>
+      <textarea id="captacion-tasa-plan" onblur="guardarCaptacionTasa()"></textarea>
+      <label>Fecha</label>
+      <input type="date" id="captacion-tasa-fecha" onchange="guardarCaptacionTasa()">
+      <span class="saved-badge" id="captacion-tasa-badge">✓ Guardado</span>
+    </div>
+  `);
+}
+renderCaptacion();
+window.guardarCaptacionTasa = async function(){
+  await guardarCampo('cliente/captacion/tasaConversion', {
+    valor: document.getElementById('captacion-tasa').value,
+    plan: document.getElementById('captacion-tasa-plan').value,
+    fecha: document.getElementById('captacion-tasa-fecha').value,
+  }, 'captacion-tasa-badge');
+};
+
+// ══ COMPETENCIA (1 competidor visible, hasta 2 más con "+ Añadir") ══
+const COMPETENCIA_MAX = 3;
+let competenciaContador = 0;
+function renderCompetencia(){
+  document.getElementById('competencia-lista').innerHTML = '';
+  competenciaContador = 0;
+  document.getElementById('competencia-agregar-card').classList.remove('hidden');
+  agregarCompetidor();
+}
+window.agregarCompetidor = function(){
+  if(competenciaContador >= COMPETENCIA_MAX) return;
+  const idx = competenciaContador++;
+  if(competenciaContador >= COMPETENCIA_MAX){
+    document.getElementById('competencia-agregar-card').classList.add('hidden');
+  }
+  document.getElementById('competencia-lista').insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <h3 style="margin:0 0 10px;font-size:.9rem;color:var(--bm-blue)">Competidor ${idx+1}</h3>
+      <label style="margin-top:0">Competidor visitado</label>
+      <input type="text" id="comp-${idx}-competidor" onblur="guardarCompetidor(${idx})">
+      <label>Observaciones</label>
+      <textarea id="comp-${idx}-observaciones" onblur="guardarCompetidor(${idx})"></textarea>
+      <label>Acciones</label>
+      <textarea id="comp-${idx}-acciones" onblur="guardarCompetidor(${idx})"></textarea>
+      <span class="saved-badge" id="comp-${idx}-badge">✓ Guardado</span>
+    </div>
+  `);
+};
+window.guardarCompetidor = async function(idx){
+  await guardarCampo(`cliente/competencia/${idx}`, {
+    competidor: document.getElementById(`comp-${idx}-competidor`).value,
+    observaciones: document.getElementById(`comp-${idx}-observaciones`).value,
+    acciones: document.getElementById(`comp-${idx}-acciones`).value,
+  }, `comp-${idx}-badge`);
+};
+renderCompetencia();
+
+// ══ TRANSPORTE ══
+const TRANSPORTE_VALORACIONES = [
+  {key:'puntualidad', label:'Puntualidad de la entrega'},
+  {key:'estadoMercancia', label:'Estado en el que recibió la mercancía'},
+  {key:'tratoTransportista', label:'Trato recibido por el transportista'},
+  {key:'informacionEntrega', label:'Información recibida sobre la entrega'},
+];
+function renderTransporte(){
+  poblarEscala010(document.getElementById('tr-nps'));
+  document.getElementById('tr-valoraciones').innerHTML = TRANSPORTE_VALORACIONES.map(v=>`
+    <label>${v.label}</label>
+    <select id="tr-val-${v.key}" onchange="guardarTransporte()">
+      <option value="">Selecciona</option>
+      ${ESCALA_VALORACION.map(o=>`<option>${o}</option>`).join('')}
+    </select>
+  `).join('');
+}
+renderTransporte();
+window.setTrIncidencia = function(hayIncidencia){
+  document.getElementById('tr-incidencia-si').classList.toggle('sel-no', hayIncidencia===false);
+  document.getElementById('tr-incidencia-no').classList.toggle('sel-si', hayIncidencia===true);
+  document.getElementById('tr-incidencia-extra').classList.toggle('show', hayIncidencia===true);
+  guardarTransporte();
+};
+window.guardarTransporte = async function(){
+  const valoraciones={};
+  TRANSPORTE_VALORACIONES.forEach(v=>{ valoraciones[v.key]=document.getElementById(`tr-val-${v.key}`).value; });
+  await guardarCampo('cliente/transporte', {
+    tipoCliente: document.getElementById('tr-tipocliente').value,
+    valoraciones,
+    entregaSinIncidencias: document.getElementById('tr-incidencia-si').classList.contains('sel-no'),
+    incidenciaDetalle: document.getElementById('tr-incidencia-detalle').value,
+    npsTransporte: document.getElementById('tr-nps').value,
+    queMejorar: document.getElementById('tr-quemejorar').value,
+  });
+};
+
+// ══ CARTERA ══
+function renderCartera(){
+  document.getElementById('cartera-lista').innerHTML = `
+    <div class="card">
+      <label style="margin-top:0">Nº de clientes sin compra en el mes</label>
+      <input type="text" id="cart-sincompra-num" onblur="guardarCartera()">
+      <label>Plan de acción</label>
+      <textarea id="cart-sincompra-plan" onblur="guardarCartera()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="cart-sincompra-fecha" onchange="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">Consumo del crédito concedido de mis clientes de cartera</label>
+      <input type="text" id="cart-consumocredito" onblur="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">% de clientes con compras en 3 secciones o menos</label>
+      <input type="text" id="cart-pocassecciones" onblur="guardarCartera()">
+      <label>Plan de acción</label>
+      <textarea id="cart-pocassecciones-plan" onblur="guardarCartera()"></textarea>
+      <label>Fecha</label>
+      <input type="date" id="cart-pocassecciones-fecha" onchange="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">Clientes en riesgo (sin compra la semana anterior)</label>
+      <input type="text" id="cart-riesgo" onblur="guardarCartera()">
+    </div>
+    <div class="card">
+      <label style="margin-top:0">% de clientes que generan el 50% de la cifra de venta</label>
+      <input type="text" id="cart-50pct" onblur="guardarCartera()">
+    </div>
+  `;
+}
+renderCartera();
+window.guardarCartera = async function(){
+  await guardarCampo('cliente/cartera/metricas', {
+    sinCompra:{numero:document.getElementById('cart-sincompra-num').value, plan:document.getElementById('cart-sincompra-plan').value, fecha:document.getElementById('cart-sincompra-fecha').value},
+    consumoCredito: document.getElementById('cart-consumocredito').value,
+    pocasSecciones:{valor:document.getElementById('cart-pocassecciones').value, plan:document.getElementById('cart-pocassecciones-plan').value, fecha:document.getElementById('cart-pocassecciones-fecha').value},
+    clientesRiesgo: document.getElementById('cart-riesgo').value,
+    clientes50pct: document.getElementById('cart-50pct').value,
+  });
+};
+window.guardarClientePrincipal = async function(){
+  await guardarCampo('cliente/cartera/clientePrincipal', {
+    nombre: document.getElementById('cp-nombre').value,
+    obra: document.getElementById('cp-obra').value,
+    observaciones: document.getElementById('cp-observaciones').value,
+    acciones: document.getElementById('cp-acciones').value,
+  });
+};
+
+// ══ MOTOR DE SECUENCIA DE PANTALLAS — una pantalla por bloque, con Atrás/Continuar ══
+function crearPantallaSecuencial(id, tituloHtml, siguienteId){
+  const sec = document.createElement('section');
+  sec.id = id;
+  sec.className = 'hidden';
+  sec.innerHTML = `
+    <div class="card"><h2>${tituloHtml}</h2></div>
+    <div id="${id}-cont"></div>
+    <div class="card">
+      <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
+      <button class="btn" style="margin-left:8px" onclick="irA('${siguienteId}')">Continuar ▸</button>
+    </div>
+  `;
+  document.querySelector('main').appendChild(sec);
+  return document.getElementById(`${id}-cont`);
+}
+function construirSecuencia(grupos, siguienteFinal){
+  for(let i=0;i<grupos.length;i++){
+    const siguienteId = i<grupos.length-1 ? grupos[i+1].id : siguienteFinal;
+    const cont = crearPantallaSecuencial(grupos[i].id, grupos[i].titulo, siguienteId);
+    grupos[i].render(cont);
+  }
+}
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+// ══ SECCIONES — RUPTURAS ══
+function construirRupturas(cont){
+  cont.innerHTML = `
+    <div class="card">
+      <label style="margin-top:0">% de Rupturas + Futuras rupturas</label>
+      <input type="text" id="sec-rupturas-pct" onblur="guardarRupturas()">
+      <label>Plan de trabajo</label>
+      <textarea id="sec-rupturas-plan" onblur="guardarRupturas()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="sec-rupturas-cuando" onchange="guardarRupturas()">
+      <label>Familias críticas</label>
+      <input type="text" id="sec-familiascriticas" onblur="guardarRupturas()" placeholder="Ej: CERAMICA;ELECTRICIDAD;FERRETERIA">
+      <label>Plan de acción</label>
+      <textarea id="sec-familiascriticas-plan" onblur="guardarRupturas()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="sec-familiascriticas-cuando" onchange="guardarRupturas()">
+    </div>
+  `;
+}
+window.guardarRupturas = async function(){
+  await guardarCampo('secciones/rupturas', {
+    porcentaje: document.getElementById('sec-rupturas-pct').value,
+    planTrabajo: document.getElementById('sec-rupturas-plan').value,
+    cuandoTrabajo: document.getElementById('sec-rupturas-cuando').value,
+    familiasCriticas: document.getElementById('sec-familiascriticas').value,
+    planAccion: document.getElementById('sec-familiascriticas-plan').value,
+    cuandoAccion: document.getElementById('sec-familiascriticas-cuando').value,
+  });
+};
+
+// ══ SECCIONES — FAMILIAS DE LINEAL (10, cada una su propia pantalla) ══
+const FAMILIAS_LINEAL = [
+  {key:'alimentacionAgua', label:'Alimentación agua'},
+  {key:'accFontaneria', label:'Accesorios fontanería'},
+  {key:'accInstalacionesElectricas', label:'Accesorios instalaciones eléctricas'},
+  {key:'cable', label:'Cable'},
+  {key:'mecanismos', label:'Mecanismos'},
+  {key:'adhesivos', label:'Adhesivos'},
+  {key:'herramientasPintor', label:'Herramientas pintor'},
+  {key:'proteccion', label:'Protección'},
+  {key:'accHerramienta', label:'Accesorios herramienta'},
+  {key:'tornilleria', label:'Tornillería'},
+];
+const ESCALA_FAMILIA_ATRIBUTOS = [
+  {key:'lleno', label:'Lleno'},
+  {key:'sensacionLleno', label:'Sensación de lleno'},
+  {key:'balizado', label:'Balizado'},
+  {key:'limpieza', label:'Limpieza'},
+  {key:'facing', label:'Facing'},
+  {key:'roturas', label:'Roturas'},
+  {key:'fueraDeSitio', label:'Producto fuera de sitio'},
+];
+function poblarEscala15(sel){
+  sel.innerHTML = '<option value="">Selecciona</option>' + [1,2,3,4,5].map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+function renderUnaFamilia(f, cont){
+  cont.innerHTML = `
+    <div class="card">
+      <div id="fam-${f.key}-attrs"></div>
+      <label>Plan de acción</label>
+      <textarea id="fam-${f.key}-plan" onblur="guardarFamilia('${f.key}')"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="fam-${f.key}-cuando" onchange="guardarFamilia('${f.key}')">
+      <span class="saved-badge" id="fam-${f.key}-badge">✓ Guardado</span>
+    </div>
+  `;
+  const cont2 = document.getElementById(`fam-${f.key}-attrs`);
+  cont2.innerHTML = ESCALA_FAMILIA_ATRIBUTOS.map((a,i)=>`
+    <label style="margin-top:${i===0?'0':'8px'}">${a.label}</label>
+    <select id="fam-${f.key}-${a.key}" onchange="guardarFamilia('${f.key}')"></select>
+  `).join('');
+  ESCALA_FAMILIA_ATRIBUTOS.forEach(a=> poblarEscala15(document.getElementById(`fam-${f.key}-${a.key}`)));
+}
+window.guardarFamilia = async function(key){
+  const datos = {
+    plan: document.getElementById(`fam-${key}-plan`).value,
+    cuando: document.getElementById(`fam-${key}-cuando`).value,
+  };
+  ESCALA_FAMILIA_ATRIBUTOS.forEach(a=>{ datos[a.key] = document.getElementById(`fam-${key}-${a.key}`).value; });
+  await guardarCampo(`secciones/familias/${key}`, datos, `fam-${key}-badge`);
+};
+
+// ══ SECCIONES — IMPLANTACIÓN COMERCIAL ══
+const IMPLANTACION_PUNTOS = ['cabecera','zonasAccion','ganchosStrips','cajas'];
+const IMPLANTACION_PUNTOS_LABEL = {cabecera:'Cabecera', zonasAccion:'Zonas de acción', ganchosStrips:'Ganchos strips', cajas:'Cajas'};
+const IMPLANTACION_ITEMS = IMPLANTACION_PUNTOS.flatMap(p => [
+  {key:`${p}_directrices`, label:`${IMPLANTACION_PUNTOS_LABEL[p]} — ¿Cumplen las directrices marcadas por la Compañía?`, siEsBueno:true},
+  {key:`${p}_ventas`, label:`${IMPLANTACION_PUNTOS_LABEL[p]} — ¿El % de ventas está por encima de la media de la región?`, siEsBueno:true},
+  {key:`${p}_efectividad`, label:`${IMPLANTACION_PUNTOS_LABEL[p]} — ¿La efectividad está por encima de la media de la región?`, siEsBueno:true},
+]);
+
+// Construir la secuencia completa de pantallas de Secciones: Rupturas → 10 familias → Implantación → fin-secciones
+construirSecuencia([
+  {id:'pantalla-sec-rupturas', titulo:'9. Rupturas', render: construirRupturas},
+  ...FAMILIAS_LINEAL.map((f,i)=>({id:`pantalla-fam-${f.key}`, titulo:`10.${i+1} ${f.label}`, render:(cont)=>renderUnaFamilia(f,cont)})),
+  {id:'pantalla-sec-implantacion', titulo:'11. Implantación comercial', render:(cont)=>renderBloqueSiNo(IMPLANTACION_ITEMS, cont.id, 'implantacion', 'secciones/implantacion')},
+], 'pantalla-fin-secciones');
+
+// ══ GESTIÓN ══
+window.guardarIndice = async function(){
+  await guardarCampo('gestion/indiceTienda', {
+    valor: document.getElementById('ges-indice').value,
+    plan: document.getElementById('ges-indice-plan').value,
+    cuando: document.getElementById('ges-indice-cuando').value,
+  });
+};
+function construirIndice(cont){
+  cont.innerHTML = `
+    <div class="card">
+      <label style="margin-top:0">¿El índice de la tienda es?</label>
+      <input type="text" id="ges-indice" onblur="guardarIndice()">
+      <label>Plan de acción</label>
+      <textarea id="ges-indice-plan" onblur="guardarIndice()"></textarea>
+      <label>¿Cuándo?</label>
+      <input type="date" id="ges-indice-cuando" onchange="guardarIndice()">
+    </div>
+  `;
+}
+
+const DEPARTAMENTOS = ['cajas','comercio','drive','transporte','logistica'];
+const DEPARTAMENTOS_LABEL = {cajas:'Cajas',comercio:'Comercio',drive:'Drive',transporte:'Transporte',logistica:'Logística'};
+function itemsHorasFranja(franja, pregunta){
+  return DEPARTAMENTOS.map(d => ({
+    key: d,
+    label: `${DEPARTAMENTOS_LABEL[d]} — ${pregunta}`,
+    siEsBueno: true,
+    extraHtml: `<label style="margin-top:0">Número de efectivos</label><input type="text" id="hf-${franja}-${d}-num" onblur="guardarCampo('gestion/horas${cap(franja)}/${d}Numero',{valor:this.value})">`
+  }));
+}
+
+construirSecuencia([
+  {id:'pantalla-ges-productividad', titulo:'12. Productividad', render:(cont)=>renderBloqueSiNo(
+    [{key:'productividad', label:'¿La productividad es igual o superior al objetivo de 300.000€?', siEsBueno:true}],
+    cont.id, 'gestionProductividad', 'gestion/productividad')},
+  {id:'pantalla-ges-horas', titulo:'13. Horas', render:(cont)=>renderBloqueSiNo([
+    {key:'excesos', label:'¿Hay personas con excesos de horas?',
+     extraHtml:`<label style="margin-top:0">Nº de personas con excesos</label><input type="text" id="hx-excesos-personas" onblur="guardarCampo('gestion/horas/excesosPersonas',{valor:this.value})">
+     <label>Número de horas excesas</label><input type="text" id="hx-excesos-horas" onblur="guardarCampo('gestion/horas/excesosHoras',{valor:this.value})">`},
+    {key:'defecto', label:'¿Hay personas con defectos de horas?',
+     extraHtml:`<label style="margin-top:0">Nº de personas con defectos</label><input type="text" id="hx-defecto-personas" onblur="guardarCampo('gestion/horas/defectoPersonas',{valor:this.value})">
+     <label>Número de horas pendientes</label><input type="text" id="hx-defecto-horas" onblur="guardarCampo('gestion/horas/defectoHoras',{valor:this.value})">`},
+  ], cont.id, 'gestionHoras', 'gestion/horas')},
+  {id:'pantalla-ges-indice', titulo:'14. Índice de la tienda', render: construirIndice},
+  {id:'pantalla-ges-recursos', titulo:'14. Recursos vs afluencia', render:(cont)=>renderBloqueSiNo(
+    [{key:'recursosAfluencia', label:'¿Los recursos coinciden con la afluencia?', siEsBueno:true}],
+    cont.id, 'gestionRecursos', 'gestion/recursos')},
+  {id:'pantalla-ges-horaspunta', titulo:'15. Horas Punta — Nº de efectivos', render:(cont)=>renderBloqueSiNo(
+    itemsHorasFranja('punta','¿Todos están disponibles para el cliente?'), cont.id, 'gestionHorasPunta', 'gestion/horasPunta')},
+  {id:'pantalla-ges-horasvalle', titulo:'16. Horas Valle — Nº de efectivos', render:(cont)=>renderBloqueSiNo(
+    itemsHorasFranja('valle','¿Las tareas que realiza son acordes a la situación?'), cont.id, 'gestionHorasValle', 'gestion/horasValle')},
+  {id:'pantalla-ges-seguridad', titulo:'17. Seguridad', render:(cont)=>renderBloqueSiNo([
+    {key:'epis', label:'¿Es correcto el uso de EPIs?', siEsBueno:true},
+    {key:'estibacion', label:'¿Es correcta la Estibación?', siEsBueno:true},
+    {key:'cargaClientes', label:'¿Es correcta la Carga a Clientes?', siEsBueno:true},
+    {key:'manipulacion', label:'¿Es correcta la Manipulación?', siEsBueno:true},
+    {key:'ordenLimpieza', label:'¿Hay orden y limpieza?', siEsBueno:true},
+  ], cont.id, 'gestionSeguridad', 'gestion/seguridad')},
+  {id:'pantalla-ges-ventas', titulo:'18. Ventas vs N-1', render:(cont)=>renderBloqueSiNo([
+    {key:'tienda', label:'La tienda, ¿crece vs N-1?', siEsBueno:true},
+    {key:'construccion', label:'Construcción, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'madera', label:'Madera, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'pintura', label:'Pintura, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'ceramica', label:'Cerámica, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'sanitario', label:'Sanitario, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'electricidad', label:'Electricidad, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'fontaneria', label:'Fontanería, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'cocinas', label:'Cocinas, ¿crece respecto a N-1?', siEsBueno:true},
+    {key:'totalGeneral', label:'Total general, ¿crece respecto a N-1?', siEsBueno:true},
+  ], cont.id, 'gestionVentas', 'gestion/ventas')},
+  {id:'pantalla-ges-precios', titulo:'19. Precios y Cheques', render:(cont)=>renderBloqueSiNo([
+    {key:'preciosForzados', label:'¿Mejora el ratio de los precios forzados?', siEsBueno:true},
+    {key:'cheques', label:'¿Mejora el ratio de cheques?', siEsBueno:true},
+  ], cont.id, 'gestionPrecios', 'gestion/precios')},
+  {id:'pantalla-ges-demarca', titulo:'20. Demarca y Stock', render:(cont)=>renderBloqueSiNo([
+    {key:'demarca', label:'¿El % de demarca sobre la CV de la tienda es inferior al 0,8%?', siEsBueno:true},
+    {key:'inventariosRotativos', label:'¿Cumple con los inventarios rotativos?', siEsBueno:true},
+    {key:'fiabilidadStock', label:'¿Cumple con el ratio de fiabilidad de stock?', siEsBueno:true},
+  ], cont.id, 'gestionDemarca', 'gestion/demarcaStock')},
+  {id:'pantalla-ges-workflows', titulo:'21. Workflows', render:(cont)=>renderBloqueSiNo([
+    {key:'pendientes', label:'¿Hay workflows pendientes?'},
+    {key:'vencidos', label:'¿Hay workflows vencidos?'},
+    {key:'criticos', label:'¿Hay workflows críticos? (más de 30 días sin gestionar)'},
+  ], cont.id, 'gestionWorkflows', 'gestion/workflows')},
+], 'pantalla-fin-gestion');
+
+window.nuevaVisita=()=>{
+  visitaActualId=null;
+  borrarVisitaPendienteGuardada();
+  // Limpia TODOS los campos del formulario (ya no se regeneran solos, se construyeron una vez al cargar la página)
+  document.querySelectorAll('main input, main select, main textarea').forEach(el=>{ el.value=''; });
+  document.getElementById('c-fecha').value = hoy();
+  document.querySelectorAll('main .sino button').forEach(b=>b.classList.remove('sel-si','sel-no'));
+  document.querySelectorAll('main .cj-extra').forEach(e=>e.classList.remove('show'));
+  document.querySelectorAll('main [id$="-bloque-compro"], main [id$="-bloque-nocompro"]').forEach(e=>e.classList.add('hidden'));
+  document.querySelectorAll('main .saved-badge').forEach(b=>b.classList.remove('show'));
+  renderCompetencia();
+  irA('pantalla-cabecera');
+  historialPantallas = [];
+};
+</script>
+</body>
+</html>
