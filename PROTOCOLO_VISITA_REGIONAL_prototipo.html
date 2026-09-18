@@ -99,6 +99,12 @@
 
   <!-- ══ PANTALLA 1: CABECERA ══ -->
   <section id="pantalla-cabecera">
+    <div class="card hidden" id="banner-visita-pendiente" style="background:var(--bm-blue-light);border:1.5px solid var(--bm-blue)">
+      <h3 style="margin:0 0 6px;font-size:.9rem;color:var(--bm-blue)">📌 Tienes una visita sin terminar</h3>
+      <p id="banner-visita-info" style="font-size:.85rem;margin:0 0 12px"></p>
+      <button class="btn" onclick="continuarVisitaPendiente()">Continuar esa visita ▸</button>
+      <button class="btn btn-ghost" style="margin-left:8px" onclick="descartarVisitaPendiente()">Empezar una nueva</button>
+    </div>
     <div class="card">
       <h2>1. Datos de la visita</h2>
       <div class="row">
@@ -417,6 +423,223 @@ async function iniciarFirebase(cfg){
     poblarDirectores();
     renderListaDirectoresModal();
   });
+
+  comprobarVisitaPendiente();
+}
+
+// ══ RECUPERAR VISITA EN CURSO (si se cerró el navegador a mitad) ══
+function comprobarVisitaPendiente(){
+  let guardado=null;
+  try{ const raw=localStorage.getItem('bm_visita_en_curso'); guardado = raw?JSON.parse(raw):null; }catch(e){}
+  if(!guardado || !guardado.visitaId) return;
+  _onValue(ref(`visitas/${guardado.visitaId}/cabecera`), s=>{
+    const cab = s.val();
+    if(!cab){ borrarVisitaPendienteGuardada(); return; }
+    document.getElementById('banner-visita-info').textContent =
+      `${cab.tienda||'?'} · ${cab.director||'?'} · ${cab.fecha||'?'}`;
+    document.getElementById('banner-visita-pendiente').classList.remove('hidden');
+    window._visitaPendiente = guardado;
+  }, {onlyOnce:true});
+}
+window.descartarVisitaPendiente = function(){
+  borrarVisitaPendienteGuardada();
+  document.getElementById('banner-visita-pendiente').classList.add('hidden');
+};
+window.continuarVisitaPendiente = async function(){
+  const guardado = window._visitaPendiente;
+  if(!guardado) return;
+  await new Promise(resolve=>{
+    _onValue(ref(`visitas/${guardado.visitaId}`), s=>{ restaurarVisitaEnFormulario(s.val()||{}); resolve(); }, {onlyOnce:true});
+  });
+  visitaActualId = guardado.visitaId;
+  historialPantallas = ['pantalla-cabecera'];
+  document.getElementById('banner-visita-pendiente').classList.add('hidden');
+  document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(guardado.pantalla).classList.remove('hidden');
+  window.scrollTo(0,0);
+};
+
+// Nota importante: estas funciones de "restaurar" NUNCA deben llamar a las funciones
+// setX/guardarX normales de la app — esas releen el formulario entero y lo vuelven a
+// guardar, y si se llaman ANTES de rellenar los campos de texto de al lado, guardarían
+// esos campos como vacíos, borrando en Firebase lo que se estaba intentando recuperar.
+// Por eso aquí se toca el DOM (clases visuales + .value) directamente, sin disparar guardado.
+function restaurarBloqueSiNo(items, pathBase, datosGrupo){
+  if(!datosGrupo) return;
+  items.forEach(it=>{
+    const d = datosGrupo[it.key];
+    if(!d) return;
+    const elSi = document.getElementById(`blq-${pathBase}-${it.key}-si`);
+    const elNo = document.getElementById(`blq-${pathBase}-${it.key}-no`);
+    if(!elSi || !elNo) return;
+    elSi.classList.remove('sel-si','sel-no');
+    elNo.classList.remove('sel-si','sel-no');
+    if(d.cumple===true) elSi.classList.add(it.siEsBueno ? 'sel-no' : 'sel-si');
+    if(d.cumple===false) elNo.classList.add(it.siEsBueno ? 'sel-si' : 'sel-no');
+    elSi.dataset.valor = String(d.cumple);
+    const esMalo = it.siEsBueno ? (d.cumple===false) : (d.cumple===true);
+    const extraEl = document.getElementById(`blq-${pathBase}-${it.key}-extra`);
+    if(extraEl) extraEl.classList.toggle('show', esMalo);
+    const planEl = document.getElementById(`blq-${pathBase}-${it.key}-plan`);
+    const fechaEl = document.getElementById(`blq-${pathBase}-${it.key}-fecha`);
+    if(planEl) planEl.value = d.plan || '';
+    if(fechaEl) fechaEl.value = d.fecha || '';
+  });
+}
+function restaurarSiNoSimple(idSi, idNo, valor, siEsBueno){
+  const elSi=document.getElementById(idSi), elNo=document.getElementById(idNo);
+  if(!elSi||!elNo) return;
+  elSi.classList.remove('sel-si','sel-no'); elNo.classList.remove('sel-si','sel-no');
+  if(valor===true) elSi.classList.add(siEsBueno?'sel-no':'sel-si');
+  if(valor===false) elNo.classList.add(siEsBueno?'sel-si':'sel-no');
+}
+
+function restaurarVisitaEnFormulario(datos){
+  const cab = datos.cabecera || {};
+  document.getElementById('c-director').value = cab.director||'';
+  document.getElementById('c-tienda').value = cab.tienda||'';
+  document.getElementById('c-tipovisita').value = cab.tipoVisita||'';
+  document.getElementById('c-directortienda').value = cab.directorTienda||'';
+  document.getElementById('c-fecha').value = cab.fecha||hoy();
+  document.getElementById('cj-contexto').textContent = `${cab.tienda||''} · ${cab.director||''} · ${cab.fecha||''}`;
+
+  const cliente = datos.cliente || {};
+
+  const cj = cliente.customerJourney || {};
+  CUSTOMER_JOURNEY_PUNTOS.forEach(p=>{
+    const d = cj[p.key]; if(!d) return;
+    const queEl = document.getElementById(`cj-${p.key}-que`); if(queEl) queEl.value = d.que||'';
+    const cuandoEl = document.getElementById(`cj-${p.key}-cuando`); if(cuandoEl) cuandoEl.value = d.cuando||'';
+    restaurarSiNoSimple(`cj-${p.key}-si`, `cj-${p.key}-no`, d.ejeMejora, false);
+    const extraEl = document.getElementById(`cj-${p.key}-extra`); if(extraEl) extraEl.classList.toggle('show', d.ejeMejora===true);
+  });
+
+  const tc = cliente.tiempoCompra || {};
+  CLIENTE_TIPOS.forEach(ct=>{
+    const d = tc[ct.key]; if(!d) return;
+    const hor = d.horario||{};
+    const e1=document.getElementById(`ct-${ct.key}-entrada`); if(e1) e1.value=hor.horaEntrada||'';
+    const e2=document.getElementById(`ct-${ct.key}-salida`); if(e2) e2.value=hor.horaSalida||'';
+    const nps = d.nps;
+    if(nps && nps.tipoCliente==='Compró'){
+      document.getElementById(`ct-${ct.key}-nota`).value = nps.notaRecomendacion||'';
+      NPS_VALORACIONES.forEach(v=>{ const el=document.getElementById(`ct-${ct.key}-val-${v.key}`); if(el) el.value=(nps.valoraciones||{})[v.key]||''; });
+      document.getElementById(`ct-${ct.key}-mejorar`).value = nps.mejorar||'';
+      restaurarSiNoSimple(`ct-${ct.key}-compro-si`, `ct-${ct.key}-compro-no`, true, true);
+      restaurarSiNoSimple(`ct-${ct.key}-primera-si`, `ct-${ct.key}-primera-no`, nps.primeraCompra, false);
+      document.getElementById(`ct-${ct.key}-bloque-compro`).classList.remove('hidden');
+      document.getElementById(`ct-${ct.key}-bloque-nocompro`).classList.add('hidden');
+    } else if(nps && nps.tipoCliente==='No compró'){
+      document.getElementById(`ct-${ct.key}-motivo`).value = nps.motivo||'';
+      document.getElementById(`ct-${ct.key}-porque`).value = nps.porque||'';
+      document.getElementById(`ct-${ct.key}-probvolver`).value = nps.probabilidadVolver||'';
+      document.getElementById(`ct-${ct.key}-quemejorar-nc`).value = nps.queMejorar||'';
+      restaurarSiNoSimple(`ct-${ct.key}-compro-si`, `ct-${ct.key}-compro-no`, false, true);
+      restaurarSiNoSimple(`ct-${ct.key}-ayuda-si`, `ct-${ct.key}-ayuda-no`, nps.encontroAyuda, true);
+      document.getElementById(`ct-${ct.key}-bloque-compro`).classList.add('hidden');
+      document.getElementById(`ct-${ct.key}-bloque-nocompro`).classList.remove('hidden');
+    }
+  });
+
+  restaurarBloqueSiNo(CAPTACION_ITEMS, 'captacion', cliente.captacion);
+  if(cliente.captacion && cliente.captacion.tasaConversion){
+    const t=cliente.captacion.tasaConversion;
+    document.getElementById('captacion-tasa').value=t.valor||'';
+    document.getElementById('captacion-tasa-plan').value=t.plan||'';
+    document.getElementById('captacion-tasa-fecha').value=t.fecha||'';
+  }
+
+  if(cliente.competencia){
+    renderCompetencia();
+    const claves = Object.keys(cliente.competencia).map(Number).sort((a,b)=>a-b);
+    claves.forEach(idx=>{
+      while(competenciaContador<=idx) agregarCompetidor();
+      const d = cliente.competencia[idx];
+      document.getElementById(`comp-${idx}-competidor`).value = d.competidor||'';
+      document.getElementById(`comp-${idx}-observaciones`).value = d.observaciones||'';
+      document.getElementById(`comp-${idx}-acciones`).value = d.acciones||'';
+    });
+  }
+
+  if(cliente.transporte){
+    const t=cliente.transporte;
+    document.getElementById('tr-tipocliente').value=t.tipoCliente||'';
+    TRANSPORTE_VALORACIONES.forEach(v=>{ const el=document.getElementById(`tr-val-${v.key}`); if(el) el.value=(t.valoraciones||{})[v.key]||''; });
+    document.getElementById('tr-incidencia-detalle').value=t.incidenciaDetalle||'';
+    document.getElementById('tr-nps').value=t.npsTransporte||'';
+    document.getElementById('tr-quemejorar').value=t.queMejorar||'';
+    const hayIncidencia = !t.entregaSinIncidencias;
+    restaurarSiNoSimple('tr-incidencia-si','tr-incidencia-no', !hayIncidencia, true);
+    const extraTr = document.getElementById('tr-incidencia-extra'); if(extraTr) extraTr.classList.toggle('show', hayIncidencia);
+  }
+
+  if(cliente.cartera){
+    const m = cliente.cartera.metricas||{};
+    if(m.sinCompra){
+      document.getElementById('cart-sincompra-num').value=m.sinCompra.numero||'';
+      document.getElementById('cart-sincompra-plan').value=m.sinCompra.plan||'';
+      document.getElementById('cart-sincompra-fecha').value=m.sinCompra.fecha||'';
+    }
+    document.getElementById('cart-consumocredito').value=m.consumoCredito||'';
+    if(m.pocasSecciones){
+      document.getElementById('cart-pocassecciones').value=m.pocasSecciones.valor||'';
+      document.getElementById('cart-pocassecciones-plan').value=m.pocasSecciones.plan||'';
+      document.getElementById('cart-pocassecciones-fecha').value=m.pocasSecciones.fecha||'';
+    }
+    document.getElementById('cart-riesgo').value=m.clientesRiesgo||'';
+    document.getElementById('cart-50pct').value=m.clientes50pct||'';
+    const cp = cliente.cartera.clientePrincipal;
+    if(cp){
+      document.getElementById('cp-nombre').value=cp.nombre||'';
+      document.getElementById('cp-obra').value=cp.obra||'';
+      document.getElementById('cp-observaciones').value=cp.observaciones||'';
+      document.getElementById('cp-acciones').value=cp.acciones||'';
+    }
+  }
+
+  const sec = datos.secciones || {};
+  if(sec.rupturas){
+    const r=sec.rupturas;
+    document.getElementById('sec-rupturas-pct').value=r.porcentaje||'';
+    document.getElementById('sec-rupturas-plan').value=r.planTrabajo||'';
+    document.getElementById('sec-rupturas-cuando').value=r.cuandoTrabajo||'';
+    document.getElementById('sec-familiascriticas').value=r.familiasCriticas||'';
+    document.getElementById('sec-familiascriticas-plan').value=r.planAccion||'';
+    document.getElementById('sec-familiascriticas-cuando').value=r.cuandoAccion||'';
+  }
+  FAMILIAS_LINEAL.forEach(f=>{
+    const d = (sec.familias||{})[f.key]; if(!d) return;
+    ESCALA_FAMILIA_ATRIBUTOS.forEach(a=>{ const el=document.getElementById(`fam-${f.key}-${a.key}`); if(el) el.value=d[a.key]||''; });
+    const planEl=document.getElementById(`fam-${f.key}-plan`); if(planEl) planEl.value=d.plan||'';
+    const cuandoEl=document.getElementById(`fam-${f.key}-cuando`); if(cuandoEl) cuandoEl.value=d.cuando||'';
+  });
+  restaurarBloqueSiNo(IMPLANTACION_ITEMS, 'implantacion', sec.implantacion);
+
+  const ges = datos.gestion || {};
+  restaurarBloqueSiNo([{key:'productividad', siEsBueno:true}], 'gestionProductividad', ges.productividad);
+  restaurarBloqueSiNo([{key:'excesos'},{key:'defecto'}], 'gestionHoras', ges.horas);
+  if(ges.horas){
+    const h=ges.horas;
+    if(h.excesosPersonas) document.getElementById('hx-excesos-personas').value=h.excesosPersonas.valor||'';
+    if(h.excesosHoras) document.getElementById('hx-excesos-horas').value=h.excesosHoras.valor||'';
+    if(h.defectoPersonas) document.getElementById('hx-defecto-personas').value=h.defectoPersonas.valor||'';
+    if(h.defectoHoras) document.getElementById('hx-defecto-horas').value=h.defectoHoras.valor||'';
+  }
+  if(ges.indiceTienda){
+    document.getElementById('ges-indice').value=ges.indiceTienda.valor||'';
+    document.getElementById('ges-indice-plan').value=ges.indiceTienda.plan||'';
+    document.getElementById('ges-indice-cuando').value=ges.indiceTienda.cuando||'';
+  }
+  restaurarBloqueSiNo([{key:'recursosAfluencia', siEsBueno:true}], 'gestionRecursos', ges.recursos);
+  restaurarBloqueSiNo(DEPARTAMENTOS.map(d=>({key:d,siEsBueno:true})), 'gestionHorasPunta', ges.horasPunta);
+  if(ges.horasPunta) DEPARTAMENTOS.forEach(d=>{ const n=ges.horasPunta[`${d}Numero`]; if(n){ const el=document.getElementById(`hf-punta-${d}-num`); if(el) el.value=n.valor||''; } });
+  restaurarBloqueSiNo(DEPARTAMENTOS.map(d=>({key:d,siEsBueno:true})), 'gestionHorasValle', ges.horasValle);
+  if(ges.horasValle) DEPARTAMENTOS.forEach(d=>{ const n=ges.horasValle[`${d}Numero`]; if(n){ const el=document.getElementById(`hf-valle-${d}-num`); if(el) el.value=n.valor||''; } });
+  restaurarBloqueSiNo([{key:'epis',siEsBueno:true},{key:'estibacion',siEsBueno:true},{key:'cargaClientes',siEsBueno:true},{key:'manipulacion',siEsBueno:true},{key:'ordenLimpieza',siEsBueno:true}], 'gestionSeguridad', ges.seguridad);
+  restaurarBloqueSiNo([{key:'tienda',siEsBueno:true},{key:'construccion',siEsBueno:true},{key:'madera',siEsBueno:true},{key:'pintura',siEsBueno:true},{key:'ceramica',siEsBueno:true},{key:'sanitario',siEsBueno:true},{key:'electricidad',siEsBueno:true},{key:'fontaneria',siEsBueno:true},{key:'cocinas',siEsBueno:true},{key:'totalGeneral',siEsBueno:true}], 'gestionVentas', ges.ventas);
+  restaurarBloqueSiNo([{key:'preciosForzados',siEsBueno:true},{key:'cheques',siEsBueno:true}], 'gestionPrecios', ges.precios);
+  restaurarBloqueSiNo([{key:'demarca',siEsBueno:true},{key:'inventariosRotativos',siEsBueno:true},{key:'fiabilidadStock',siEsBueno:true}], 'gestionDemarca', ges.demarcaStock);
+  restaurarBloqueSiNo([{key:'pendientes'},{key:'vencidos'},{key:'criticos'}], 'gestionWorkflows', ges.workflows);
 }
 // Config fija del proyecto — así los directores no tienen que rellenar nada, se conecta solo.
 const DEFAULT_FIREBASE_CONFIG = {
@@ -555,7 +778,19 @@ window.irA = function(destId){
   document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
   document.getElementById(destId).classList.remove('hidden');
   window.scrollTo(0,0);
+  guardarUbicacionActual(destId);
 };
+function guardarUbicacionActual(pantallaId){
+  try{
+    if(pantallaId==='pantalla-fin-gestion'){ borrarVisitaPendienteGuardada(); return; } // protocolo completo, nada que retomar
+    if(visitaActualId && pantallaId!=='pantalla-cabecera'){
+      localStorage.setItem('bm_visita_en_curso', JSON.stringify({visitaId: visitaActualId, pantalla: pantallaId}));
+    }
+  }catch(e){}
+}
+function borrarVisitaPendienteGuardada(){
+  try{ localStorage.removeItem('bm_visita_en_curso'); }catch(e){}
+}
 window.irAtras = function(){
   const prev = historialPantallas.pop();
   if(!prev){ showToast('No hay pantalla anterior'); return; }
@@ -1138,6 +1373,7 @@ construirSecuencia([
 
 window.nuevaVisita=()=>{
   visitaActualId=null;
+  borrarVisitaPendienteGuardada();
   // Limpia TODOS los campos del formulario (ya no se regeneran solos, se construyeron una vez al cargar la página)
   document.querySelectorAll('main input, main select, main textarea').forEach(el=>{ el.value=''; });
   document.getElementById('c-fecha').value = hoy();
