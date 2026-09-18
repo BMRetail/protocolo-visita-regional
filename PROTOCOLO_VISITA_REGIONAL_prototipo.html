@@ -482,9 +482,19 @@ async function iniciarFirebase(cfg){
     renderListaDirectoresModal();
   });
 }
+// Config fija del proyecto — así los directores no tienen que rellenar nada, se conecta solo.
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBI_-WthIX8gVOAprrbsMYaohVYjfMPQbM",
+  databaseURL: "https://bigmat-protocolo-visita-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "bigmat-protocolo-visita",
+  appId: "1:550029945101:web:e52d621c118dd9ac816844",
+};
 (function(){
-  const cfg=savedCfg();
-  if(cfg){ document.getElementById('setup-overlay').style.display='none'; iniciarFirebase(cfg); }
+  let cfg=null;
+  try{ cfg=savedCfg(); }catch(e){}
+  if(!cfg) cfg = DEFAULT_FIREBASE_CONFIG;
+  document.getElementById('setup-overlay').style.display='none';
+  iniciarFirebase(cfg);
 })();
 
 // ══ DIRECTORES (lista pequeña, cargable desde la propia app) ══
