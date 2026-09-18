@@ -104,7 +104,7 @@
       <div class="row">
         <div>
           <label>Director Regional</label>
-          <select id="c-director"></select>
+          <input type="text" id="c-director" placeholder="Nombre del Director Regional">
         </div>
         <div>
           <label>Fecha visita</label>
@@ -127,9 +127,9 @@
         </div>
       </div>
       <label>Director de Tienda</label>
-      <input type="text" id="c-directortienda" placeholder="Nombre del Director de Tienda">
+      <select id="c-directortienda"></select>
 
-      <button class="link-btn" style="margin-top:14px" onclick="abrirModalDirectores()">⚙️ Gestionar lista de Directores Regionales</button>
+      <button class="link-btn" style="margin-top:14px" onclick="abrirModalDirectores()">⚙️ Gestionar lista de Directores de Tienda</button>
 
       <div style="margin-top:16px">
         <button class="btn" onclick="iniciarVisita()">Iniciar visita ▸</button>
@@ -165,7 +165,7 @@
 <!-- ══ MODAL: gestionar Directores ══ -->
 <div class="modal-back" id="modal-directores">
   <div class="modal">
-    <h2 style="color:var(--bm-blue);margin-top:0">Directores Regionales</h2>
+    <h2 style="color:var(--bm-blue);margin-top:0">Directores de Tienda</h2>
     <p style="font-size:.8rem;color:#777">Lista actual (<span id="dir-count">0</span>):</p>
     <div id="dir-lista" style="font-size:.82rem;max-height:140px;overflow:auto;margin-bottom:12px"></div>
     <label>Añadir nombres (uno por línea)</label>
@@ -236,8 +236,14 @@ function mostrarErrorSetup(msg){
   console.error('[Protocolo Visita Firebase]', msg);
 }
 async function iniciarFirebase(cfg){
-  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-  const fbdb = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+  let initializeApp, fbdb;
+  try{
+    ({ initializeApp } = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/app/+esm'));
+    fbdb = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/database/+esm');
+  }catch(e){
+    mostrarErrorSetup('No se pudo cargar el SDK de Firebase: '+e.message);
+    return;
+  }
   _ref=fbdb.ref; _onValue=fbdb.onValue; _set=fbdb.set; _push=fbdb.push; _child=fbdb.child;
 
   let app;
@@ -280,7 +286,7 @@ async function iniciarFirebase(cfg){
 
 // ══ DIRECTORES (lista pequeña, cargable desde la propia app) ══
 function poblarDirectores(){
-  const sel=document.getElementById('c-director');
+  const sel=document.getElementById('c-directortienda');
   const nombres=Object.values(directoresCache).map(d=>d.nombre).sort();
   sel.innerHTML='<option value="">Selecciona</option>'+nombres.map(n=>`<option>${n}</option>`).join('');
 }
@@ -317,14 +323,25 @@ window.iniciarVisita=async()=>{
     errEl.style.display='block';
     return;
   }
+  if(!db){
+    errEl.textContent='Firebase no está conectado todavía — espera al punto verde "En línea" arriba antes de continuar.';
+    errEl.style.display='block';
+    return;
+  }
   errEl.style.display='none';
 
-  const nuevaRef=_push(ref('visitas'));
-  visitaActualId=nuevaRef.key;
-  await _set(nuevaRef, {
-    cabecera:{director,fecha,tienda,tipoVisita,directorTienda,creado:new Date().toISOString()}
-  });
-  showToast('Visita creada — ya está guardada');
+  try{
+    const nuevaRef=_push(ref('visitas'));
+    visitaActualId=nuevaRef.key;
+    await _set(nuevaRef, {
+      cabecera:{director,fecha,tienda,tipoVisita,directorTienda,creado:new Date().toISOString()}
+    });
+    showToast('Visita creada — ya está guardada');
+  }catch(e){
+    errEl.textContent='No se pudo guardar en Firebase: '+e.message;
+    errEl.style.display='block';
+    return;
+  }
 
   document.getElementById('cj-contexto').textContent = `${tienda} · ${director} · ${fecha}`;
   renderCustomerJourney();
