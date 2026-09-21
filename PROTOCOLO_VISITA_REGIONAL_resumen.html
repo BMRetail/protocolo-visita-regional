@@ -132,9 +132,19 @@ const TIENDAS = ["EIXAMPLE","HOSPITALET","SABADELL","SANT_ADRIA","SANT_BOI","SAN
 async function iniciarFirebase(cfg){
   const { initializeApp } = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/app/+esm');
   const fbdb = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/database/+esm');
+  const fbauth = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/auth/+esm');
   _ref=fbdb.ref; _onValue=fbdb.onValue; _get=fbdb.get;
   const app = initializeApp(cfg);
   db = fbdb.getDatabase(app);
+
+  try{
+    const auth = fbauth.getAuth(app);
+    await fbauth.signInAnonymously(auth);
+  }catch(e){
+    document.getElementById('ctxt').textContent = 'Error de autenticación';
+    console.error('[Protocolo Visita Firebase]', e);
+    return;
+  }
 
   _onValue(_ref(db,'.info/connected'), s=>{
     const ok = s.val();

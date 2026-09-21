@@ -414,10 +414,11 @@ function mostrarErrorSetup(msg){
   console.error('[Protocolo Visita Firebase]', msg);
 }
 async function iniciarFirebase(cfg){
-  let initializeApp, fbdb;
+  let initializeApp, fbdb, fbauth;
   try{
     ({ initializeApp } = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/app/+esm'));
     fbdb = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/database/+esm');
+    fbauth = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/auth/+esm');
   }catch(e){
     mostrarErrorSetup('No se pudo cargar el SDK de Firebase: '+e.message);
     return;
@@ -436,6 +437,13 @@ async function iniciarFirebase(cfg){
   catch(e){
     mostrarErrorSetup('Error de conexión: '+e.message+' — revisa la Database URL');
     localStorage.removeItem('bm_protocolo_visita_firebase');
+    return;
+  }
+  try{
+    const auth = fbauth.getAuth(app);
+    await fbauth.signInAnonymously(auth);
+  }catch(e){
+    mostrarErrorSetup('Error de autenticación: '+e.message);
     return;
   }
 
