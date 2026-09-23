@@ -64,6 +64,9 @@
   .setup-err{color:var(--bm-red);font-size:.78rem;margin:8px 0;display:none}
   .link-btn{background:none;border:none;color:var(--bm-blue);text-decoration:underline;
     font-size:.78rem;cursor:pointer;padding:0}
+  .admin-plegable{margin:28px 4px 8px;font-size:.72rem;color:#aaa}
+  .admin-plegable summary{cursor:pointer;width:max-content;user-select:none}
+  .admin-plegable[open] summary{color:#777}
   .modal-back{position:fixed;inset:0;background:rgba(20,24,27,.5);display:none;
     align-items:center;justify-content:center;z-index:80;padding:16px}
   .modal-back.show{display:flex}
@@ -135,16 +138,20 @@
       <label>Director de Tienda</label>
       <select id="c-directortienda"></select>
 
-      <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
-        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectoresRegionales)">⚙️ Gestionar Directores Regionales</button>
-        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectores)">⚙️ Gestionar Directores de Tienda</button>
-      </div>
-
       <div style="margin-top:16px">
         <button class="btn" onclick="iniciarVisita()">Iniciar visita ▸</button>
       </div>
       <div class="setup-err" id="cabecera-err"></div>
     </div>
+
+    <!-- Administración: plegada y discreta, fuera de la vista de los directores -->
+    <details class="admin-plegable">
+      <summary>Administración</summary>
+      <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
+        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectoresRegionales)">⚙️ Gestionar Directores Regionales</button>
+        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectores)">⚙️ Gestionar Directores de Tienda</button>
+      </div>
+    </details>
   </section>
 
   <!-- ══ PANTALLA 2: CUSTOMER JOURNEY (2.1 Bloque Cliente) ══ -->
