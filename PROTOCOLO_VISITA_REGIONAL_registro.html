@@ -113,7 +113,7 @@
       <div class="row">
         <div>
           <label>Director Regional</label>
-          <select id="c-director"></select>
+          <select id="c-director" onchange="cambioDirectorRegional()"></select>
         </div>
         <div>
           <label>Fecha visita</label>
@@ -123,7 +123,7 @@
       <div class="row">
         <div>
           <label>Tienda</label>
-          <select id="c-tienda"></select>
+          <select id="c-tienda" onchange="cambioTienda()"></select>
         </div>
         <div>
           <label>Tipo de visita</label>
@@ -135,6 +135,7 @@
           </select>
         </div>
       </div>
+      <div class="hidden" id="aviso-pendientes-tienda" style="background:var(--bm-blue-light);border:1.5px solid var(--bm-blue);border-radius:var(--radius);padding:12px 14px;margin-top:12px"></div>
       <label>Director de Tienda</label>
       <select id="c-directortienda"></select>
 
@@ -365,9 +366,17 @@
 
 <script>
 // ══ CONSTANTES ══
-const TIENDAS = ["EIXAMPLE","HOSPITALET","SABADELL","SANT_ADRIA","SANT_BOI","SANT_JUST","GRAU",
-  "VALLADOLID","BENAVENTE","PALENCIA","ALCALA","ALCOBENDAS","ALCORCON","ATOCHA",
-  "GARCIA_NOBLEJAS","GETAFE","FUENLABRADA"];
+const TIENDAS_CATALUNA = ["EIXAMPLE","HOSPITALET","SABADELL","SANT_ADRIA","SANT_BOI","SANT_JUST","GRAU"];
+const TIENDAS_CYL = ["VALLADOLID","BENAVENTE","PALENCIA"];
+const TIENDAS_MADRID = ["ALCALA","ALCOBENDAS","ALCORCON","ATOCHA","GARCIA_NOBLEJAS","GETAFE","FUENLABRADA","ILLESCAS"];
+const TIENDAS_ANDALUCIA = ["SABINILLAS","ESTEPONA","GARRUCHA"];
+const TIENDAS = [...TIENDAS_CATALUNA, ...TIENDAS_CYL, ...TIENDAS_MADRID, ...TIENDAS_ANDALUCIA];
+// Tiendas de cada Director Regional (el nombre debe coincidir con el de su lista).
+// Un Director Regional que no esté aquí ve todas las tiendas.
+const TIENDAS_POR_REGIONAL = {
+  'Santiago Agullo': [...TIENDAS_CATALUNA, ...TIENDAS_ANDALUCIA],
+  'Manuel De Dios': [...TIENDAS_MADRID, ...TIENDAS_CYL],
+};
 
 const CUSTOMER_JOURNEY_PUNTOS = [
   {key:"parking", label:"Parking"},
@@ -381,7 +390,7 @@ const CUSTOMER_JOURNEY_PUNTOS = [
   {key:"salida", label:"Salida"},
 ];
 
-let db=null, _ref,_onValue,_set,_push,_child;
+let db=null, _ref,_onValue,_set,_push,_child,_get,_query,_orderByChild,_equalTo;
 let visitaActualId=null;
 let directoresCache={};
 let directoresRegionalesCache={};
@@ -394,10 +403,29 @@ function showToast(msg,dur=2200){
 function ref(path){ return _ref(db, path); }
 
 // ══ POBLAR SELECTS FIJOS ══
-function poblarTiendas(){
+// Muestra solo las tiendas del Director Regional elegido (+ "Ver todas las tiendas…").
+// Si hay que dejar seleccionada una tienda que no es suya (p. ej. al continuar una visita), muestra todas.
+let verTodasTiendas = false;
+function poblarTiendas(valorDeseado){
   const sel=document.getElementById('c-tienda');
-  sel.innerHTML='<option value="">Selecciona</option>'+TIENDAS.map(t=>`<option>${t}</option>`).join('');
+  const deseado = valorDeseado!==undefined ? valorDeseado : sel.value;
+  const propias = TIENDAS_POR_REGIONAL[document.getElementById('c-director').value];
+  let lista = (propias && !verTodasTiendas) ? propias : TIENDAS;
+  if(deseado && !lista.includes(deseado)) lista = TIENDAS;
+  sel.innerHTML='<option value="">Selecciona</option>'+lista.map(t=>`<option>${t}</option>`).join('')
+    + (lista!==TIENDAS ? '<option value="__todas__">Ver todas las tiendas…</option>' : '');
+  sel.value = lista.includes(deseado) ? deseado : '';
 }
+window.cambioDirectorRegional = function(){
+  verTodasTiendas = false;
+  poblarTiendas();
+  comprobarPendientesTienda();
+};
+window.cambioTienda = function(){
+  const sel=document.getElementById('c-tienda');
+  if(sel.value==='__todas__'){ verTodasTiendas = true; poblarTiendas(''); return; }
+  comprobarPendientesTienda();
+};
 document.getElementById('c-fecha').value = hoy();
 poblarTiendas();
 
@@ -431,6 +459,7 @@ async function iniciarFirebase(cfg){
     return;
   }
   _ref=fbdb.ref; _onValue=fbdb.onValue; _set=fbdb.set; _push=fbdb.push; _child=fbdb.child;
+  _get=fbdb.get; _query=fbdb.query; _orderByChild=fbdb.orderByChild; _equalTo=fbdb.equalTo;
 
   let app;
   try{ app=initializeApp(cfg); }
@@ -478,6 +507,7 @@ async function iniciarFirebase(cfg){
   });
 
   comprobarVisitaPendiente();
+  comprobarPendientesTienda();
 }
 
 // ══ RECUPERAR VISITA EN CURSO (si se cerró el navegador a mitad) ══
@@ -487,7 +517,7 @@ function comprobarVisitaPendiente(){
   if(!guardado || !guardado.visitaId) return;
   _onValue(ref(`visitas/${guardado.visitaId}/cabecera`), s=>{
     const cab = s.val();
-    if(!cab){ borrarVisitaPendienteGuardada(); return; }
+    if(!cab || cab.estado==='completada'){ borrarVisitaPendienteGuardada(); return; }
     document.getElementById('banner-visita-info').textContent =
       `${cab.tienda||'?'} · ${cab.director||'?'} · ${cab.fecha||'?'}`;
     document.getElementById('banner-visita-pendiente').classList.remove('hidden');
@@ -502,15 +532,69 @@ window.continuarVisitaPendiente = async function(){
   const guardado = window._visitaPendiente;
   if(!guardado) return;
   await new Promise(resolve=>{
-    _onValue(ref(`visitas/${guardado.visitaId}`), s=>{ restaurarVisitaEnFormulario(s.val()||{}); resolve(); }, {onlyOnce:true});
+    _onValue(ref(`visitas/${guardado.visitaId}`), s=>{ limpiarFormulario(); restaurarVisitaEnFormulario(s.val()||{}); resolve(); }, {onlyOnce:true});
   });
   visitaActualId = guardado.visitaId;
   historialPantallas = ['pantalla-cabecera'];
   document.getElementById('banner-visita-pendiente').classList.add('hidden');
+  document.getElementById('aviso-pendientes-tienda').classList.add('hidden');
   document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
   document.getElementById(guardado.pantalla).classList.remove('hidden');
   window.scrollTo(0,0);
 };
+
+// ══ VISITAS PENDIENTES DE LA TIENDA (empezadas en otro dispositivo o importadas de los Forms) ══
+// Cada visita sin terminar lleva cabecera.pendienteTienda = <tienda>; al llegar al final
+// de Gestión se borra ese campo y se marca estado:'completada' (ver marcarVisitaCompletada).
+function fechaES(iso){ const p=(iso||'').split('-'); return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : (iso||''); }
+window.comprobarPendientesTienda = async function(){
+  const aviso = document.getElementById('aviso-pendientes-tienda');
+  const tienda = document.getElementById('c-tienda').value;
+  aviso.classList.add('hidden');
+  if(!tienda || !db) return;
+  let snap;
+  try{
+    snap = await _get(_query(ref('visitas'), _orderByChild('cabecera/pendienteTienda'), _equalTo(tienda)));
+  }catch(e){ console.error('[Protocolo Visita] pendientes tienda', e); return; }
+  if(document.getElementById('c-tienda').value !== tienda) return; // cambió de tienda mientras cargaba
+  const lista = [];
+  snap.forEach(ch=>{ const c=(ch.val()||{}).cabecera||{}; if(c.estado!=='completada') lista.push({id:ch.key, ...c}); });
+  if(!lista.length) return;
+  lista.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  aviso.innerHTML = `
+    <h3 style="margin:0 0 4px;font-size:.9rem;color:var(--bm-blue)">📌 ${tienda} tiene ${lista.length===1?'una visita pendiente':lista.length+' visitas pendientes'} de completar</h3>
+    <p style="font-size:.78rem;color:#555;margin:0 0 8px">Pulsa Continuar para seguir donde se quedó: lo ya rellenado aparece en cada pantalla.</p>
+    ${lista.map(v=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0;border-top:1px solid rgba(0,0,0,.08)">
+        <span style="font-size:.85rem">${fechaES(v.fecha)} · ${v.director||'?'}${v.origen==='Forms'?' <span style="color:#888;font-size:.75rem">(empezada en Forms)</span>':''}</span>
+        <button class="btn" onclick="continuarVisitaTienda('${v.id}')">Continuar ▸</button>
+      </div>`).join('')}
+    <p style="font-size:.75rem;color:#777;margin:8px 0 0">¿Es una visita nueva? Rellena los datos y pulsa <strong>Iniciar visita</strong>.</p>
+  `;
+  aviso.classList.remove('hidden');
+};
+window.continuarVisitaTienda = async function(id){
+  let datos;
+  try{ datos = (await _get(ref(`visitas/${id}`))).val(); }
+  catch(e){ showToast('⚠ No se pudo cargar la visita: '+e.message, 4000); return; }
+  if(!datos){ showToast('Esa visita ya no existe'); comprobarPendientesTienda(); return; }
+  limpiarFormulario();
+  restaurarVisitaEnFormulario(datos);
+  visitaActualId = id;
+  document.getElementById('banner-visita-pendiente').classList.add('hidden');
+  document.getElementById('aviso-pendientes-tienda').classList.add('hidden');
+  historialPantallas = [];
+  irA('pantalla-cj');
+  historialPantallas = ['pantalla-cabecera'];
+};
+async function marcarVisitaCompletada(){
+  if(!visitaActualId) return;
+  try{
+    await _set(ref(`visitas/${visitaActualId}/cabecera/estado`), 'completada');
+    await _set(ref(`visitas/${visitaActualId}/cabecera/completado`), new Date().toISOString());
+    await _set(ref(`visitas/${visitaActualId}/cabecera/pendienteTienda`), null);
+  }catch(e){ showToast('⚠ No se pudo marcar la visita como completada: '+e.message, 4000); }
+}
 
 // Nota importante: estas funciones de "restaurar" NUNCA deben llamar a las funciones
 // setX/guardarX normales de la app — esas releen el formulario entero y lo vuelven a
@@ -550,7 +634,8 @@ function restaurarSiNoSimple(idSi, idNo, valor, siEsBueno){
 function restaurarVisitaEnFormulario(datos){
   const cab = datos.cabecera || {};
   document.getElementById('c-director').value = cab.director||'';
-  document.getElementById('c-tienda').value = cab.tienda||'';
+  verTodasTiendas = false;
+  poblarTiendas(cab.tienda||'');
   document.getElementById('c-tipovisita').value = cab.tipoVisita||'';
   document.getElementById('c-directortienda').value = cab.directorTienda||'';
   document.getElementById('c-fecha').value = cab.fecha||hoy();
@@ -814,7 +899,8 @@ window.iniciarVisita=async()=>{
     const nuevaRef=_push(ref('visitas'));
     visitaActualId=nuevaRef.key;
     await _set(nuevaRef, {
-      cabecera:{director,fecha,tienda,tipoVisita,directorTienda,creado:new Date().toISOString()}
+      cabecera:{director,fecha,tienda,tipoVisita,directorTienda,creado:new Date().toISOString(),
+                estado:'pendiente', pendienteTienda:tienda}
     });
     showToast('Visita creada — ya está guardada');
   }catch(e){
@@ -890,7 +976,7 @@ window.irA = function(destId){
 };
 function guardarUbicacionActual(pantallaId){
   try{
-    if(pantallaId==='pantalla-fin-gestion'){ borrarVisitaPendienteGuardada(); return; } // protocolo completo, nada que retomar
+    if(pantallaId==='pantalla-fin-gestion'){ marcarVisitaCompletada(); borrarVisitaPendienteGuardada(); return; } // protocolo completo, nada que retomar
     if(visitaActualId && pantallaId!=='pantalla-cabecera'){
       localStorage.setItem('bm_visita_en_curso', JSON.stringify({visitaId: visitaActualId, pantalla: pantallaId}));
     }
@@ -1479,17 +1565,24 @@ construirSecuencia([
   ], cont.id, 'gestionWorkflows', 'gestion/workflows')},
 ], 'pantalla-fin-gestion');
 
-window.nuevaVisita=()=>{
-  visitaActualId=null;
-  borrarVisitaPendienteGuardada();
-  // Limpia TODOS los campos del formulario (ya no se regeneran solos, se construyeron una vez al cargar la página)
+// Limpia TODOS los campos del formulario (no se regeneran solos, se construyeron una vez al cargar la página).
+// Solo toca el DOM: no guarda nada en Firebase.
+function limpiarFormulario(){
   document.querySelectorAll('main input, main select, main textarea').forEach(el=>{ el.value=''; });
   document.getElementById('c-fecha').value = hoy();
-  document.querySelectorAll('main .sino button').forEach(b=>b.classList.remove('sel-si','sel-no'));
+  document.querySelectorAll('main .sino button').forEach(b=>{ b.classList.remove('sel-si','sel-no'); delete b.dataset.valor; });
   document.querySelectorAll('main .cj-extra').forEach(e=>e.classList.remove('show'));
   document.querySelectorAll('main [id$="-bloque-compro"], main [id$="-bloque-nocompro"]').forEach(e=>e.classList.add('hidden'));
   document.querySelectorAll('main .saved-badge').forEach(b=>b.classList.remove('show'));
+  document.getElementById('aviso-pendientes-tienda').classList.add('hidden');
+  verTodasTiendas = false;
+  poblarTiendas('');
   renderCompetencia();
+}
+window.nuevaVisita=()=>{
+  visitaActualId=null;
+  borrarVisitaPendienteGuardada();
+  limpiarFormulario();
   irA('pantalla-cabecera');
   historialPantallas = [];
 };

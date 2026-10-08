@@ -53,6 +53,8 @@
   .badge-mensual{background:#fdf0d5;color:var(--warn)}
   .badge-especial{background:#f5e6f7;color:#7b2d8e}
   .badge-alerta{background:#fde8e8;color:var(--bm-red)}
+  .badge-pendiente{background:#fdf0d5;color:var(--warn)}
+  .badge-completada{background:#e3f4e8;color:#1e7a3c}
   .vacio{text-align:center;color:#888;padding:30px;font-size:.85rem}
   .hidden{display:none!important}
 
@@ -61,6 +63,57 @@
   .modal{background:var(--blanco);border-radius:var(--radius);padding:20px;width:100%;max-width:600px;max-height:80vh;overflow:auto}
   pre{white-space:pre-wrap;word-break:break-word;font-size:.76rem;background:var(--bg);padding:10px;border-radius:8px;margin:0}
   .btn{background:var(--bm-blue);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:.85rem;cursor:pointer}
+
+  /* ── Ficha de visita (detalle legible) ── */
+  .ficha{max-width:920px;max-height:92vh;padding:0;display:flex;flex-direction:column;overflow:hidden}
+  .ficha-head{padding:16px 20px 0;border-bottom:1px solid var(--gris-borde)}
+  .ficha-head .t{display:flex;align-items:flex-start;gap:12px}
+  .ficha-head h2{margin:0;font-size:1.15rem;color:var(--bm-blue)}
+  .ficha-head .meta{font-size:.8rem;color:#777;margin-top:4px;line-height:1.5}
+  .ficha-x{margin-left:auto;background:none;border:none;font-size:1.4rem;line-height:1;cursor:pointer;color:#888;padding:0 4px}
+  .tabs{display:flex;gap:4px;margin-top:14px;flex-wrap:wrap;align-items:flex-end}
+  .tab{background:none;border:none;border-bottom:3px solid transparent;padding:8px 12px;font-size:.88rem;font-weight:700;color:#777;cursor:pointer}
+  .tab.activa{color:var(--bm-blue);border-bottom-color:var(--bm-blue)}
+  .tab .n{display:inline-block;min-width:18px;padding:0 6px;margin-left:4px;border-radius:10px;font-size:.7rem;background:#fde8e8;color:var(--bm-red)}
+  .tab .n.cero{background:var(--bg);color:#999}
+  .solo-alertas{margin-left:auto;font-size:.78rem;color:#555;display:flex;align-items:center;gap:6px;padding:8px 0;cursor:pointer}
+  .ficha-body{overflow-y:auto;overflow-x:hidden;padding:16px 20px 20px;background:var(--bg)}
+  .grupo{background:var(--blanco);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+  .grupo h3{margin:0 0 6px;font-size:.85rem;color:var(--bm-blue);text-transform:uppercase;letter-spacing:.03em}
+  .fila{padding:8px 0;border-top:1px solid var(--gris-borde)}
+  .fila:first-of-type{border-top:none}
+  .fila .q{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;font-size:.86rem}
+  .fila .q>span:first-child{min-width:0;overflow-wrap:anywhere}
+  .fila .plan{overflow-wrap:anywhere}
+  .fila .plan{font-size:.8rem;color:#555;margin-top:4px;padding-left:10px;border-left:3px solid var(--gris-borde)}
+  .fila.mal .plan{border-left-color:var(--bm-red)}
+  .chip{flex-shrink:0;display:inline-block;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap}
+  .chip.neutro{white-space:normal;overflow-wrap:anywhere;max-width:60%;text-align:right;border-radius:10px}
+  .chip.ok{background:#e3f4e8;color:#1e7a3c}
+  .chip.mal{background:#fde8e8;color:var(--bm-red)}
+  .chip.neutro{background:var(--bm-blue-light);color:var(--bm-blue)}
+  .sin-datos{font-size:.8rem;color:#999;font-style:italic}
+  .tabla-fam{font-size:.78rem}
+  .tabla-fam th{position:static;font-size:.65rem;padding:6px 4px;text-align:center}
+  .tabla-fam th:first-child,.tabla-fam td:first-child{text-align:left}
+  .tabla-fam td{padding:6px 4px;text-align:center}
+  .tabla-fam tr:hover td{background:none}
+  .nota{display:inline-block;width:24px;height:24px;line-height:24px;border-radius:6px;font-weight:700}
+  .nota.n1,.nota.n2{background:#fde8e8;color:var(--bm-red)}
+  .nota.n3{background:#fdf0d5;color:var(--warn)}
+  .nota.n4,.nota.n5{background:#e3f4e8;color:#1e7a3c}
+  .ficha-json{margin-top:6px;font-size:.75rem}
+  .ficha-json summary{cursor:pointer;color:#999}
+  .scroll-x{overflow-x:auto}
+  body.solo-mal .fila.bien, body.solo-mal .grupo.sin-mal{display:none}
+  @media (max-width:600px){
+    .modal-back{padding:0}
+    .ficha{max-height:100vh;height:100vh;border-radius:0}
+    .ficha-head{padding:12px 14px 0}
+    .ficha-body{padding:12px}
+    .tab{padding:8px 8px}
+    .solo-alertas{margin-left:0;width:100%}
+  }
 </style>
 </head>
 <body>
@@ -96,7 +149,7 @@
     <div class="scroll-y">
       <table>
         <thead>
-          <tr><th>Fecha</th><th>Tienda</th><th>Director Regional</th><th>Director de Tienda</th><th>Tipo</th><th>Alertas</th><th></th></tr>
+          <tr><th>Fecha</th><th>Tienda</th><th>Director Regional</th><th>Director de Tienda</th><th>Tipo</th><th>Estado</th><th>Alertas</th><th></th></tr>
         </thead>
         <tbody id="tabla-visitas"></tbody>
       </table>
@@ -105,12 +158,28 @@
   </div>
 </main>
 
-<div class="modal-back" id="modal-detalle">
-  <div class="modal">
-    <h2 style="color:var(--bm-blue);margin-top:0">Detalle de la visita</h2>
-    <pre id="detalle-contenido"></pre>
-    <div style="margin-top:12px">
-      <button class="btn" onclick="document.getElementById('modal-detalle').classList.remove('show')">Cerrar</button>
+<div class="modal-back" id="modal-detalle" onclick="if(event.target===this) cerrarFicha()">
+  <div class="modal ficha">
+    <div class="ficha-head">
+      <div class="t">
+        <div>
+          <h2 id="ficha-titulo"></h2>
+          <div class="meta" id="ficha-meta"></div>
+        </div>
+        <button class="ficha-x" onclick="cerrarFicha()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="tabs">
+        <button class="tab activa" data-tab="cliente" onclick="verPestana('cliente')">Cliente<span class="n" id="n-cliente"></span></button>
+        <button class="tab" data-tab="secciones" onclick="verPestana('secciones')">Secciones<span class="n" id="n-secciones"></span></button>
+        <button class="tab" data-tab="gestion" onclick="verPestana('gestion')">Gestión<span class="n" id="n-gestion"></span></button>
+        <label class="solo-alertas"><input type="checkbox" id="chk-solo-mal" onchange="document.body.classList.toggle('solo-mal', this.checked)"> Ver solo ejes de mejora</label>
+      </div>
+    </div>
+    <div class="ficha-body">
+      <div id="ficha-cliente"></div>
+      <div id="ficha-secciones" class="hidden"></div>
+      <div id="ficha-gestion" class="hidden"></div>
+      <details class="ficha-json"><summary>Datos técnicos</summary><pre id="detalle-contenido"></pre></details>
     </div>
   </div>
 </div>
@@ -127,7 +196,7 @@ let db=null, _ref, _onValue, _get;
 let visitasCache = {};
 const TIENDAS = ["EIXAMPLE","HOSPITALET","SABADELL","SANT_ADRIA","SANT_BOI","SANT_JUST","GRAU",
   "VALLADOLID","BENAVENTE","PALENCIA","ALCALA","ALCOBENDAS","ALCORCON","ATOCHA",
-  "GARCIA_NOBLEJAS","GETAFE","FUENLABRADA"];
+  "GARCIA_NOBLEJAS","GETAFE","FUENLABRADA","ILLESCAS","SABINILLAS","ESTEPONA","GARRUCHA"];
 
 async function iniciarFirebase(cfg){
   const { initializeApp } = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/app/+esm');
@@ -168,17 +237,9 @@ window.actualizarAhora = async function(){
   aplicarFiltros();
 };
 
+// Ejes de mejora de una visita: los mismos que marca en rojo la ficha (ver fichaCliente/fichaSecciones/fichaGestion).
 function contarAlertas(visita){
-  let n = 0;
-  const recorrer = (obj) => {
-    if(obj && typeof obj === 'object'){
-      if('cumple' in obj && obj.cumple === false) n++;
-      if('ejeMejora' in obj && obj.ejeMejora === true) n++;
-      Object.values(obj).forEach(recorrer);
-    }
-  };
-  recorrer(visita.cliente); recorrer(visita.secciones); recorrer(visita.gestion);
-  return n;
+  return contarMal(fichaCliente(visita.cliente)) + contarMal(fichaSecciones(visita.secciones)) + contarMal(fichaGestion(visita.gestion));
 }
 
 function poblarFiltros(){
@@ -235,6 +296,7 @@ window.aplicarFiltros = function(){
       <td>${c.director||''}</td>
       <td>${c.directorTienda||''}</td>
       <td><span class="badge ${claseTipo}">${c.tipoVisita||'-'}</span></td>
+      <td>${c.estado==='completada'?'<span class="badge badge-completada">Completada</span>':'<span class="badge badge-pendiente">Pendiente</span>'}${c.origen==='Forms'?' <span style="font-size:.68rem;color:#999">(Forms)</span>':''}</td>
       <td>${alertas>0?`<span class="badge badge-alerta">${alertas}</span>`:'—'}</td>
       <td><button class="btn-refresh" style="color:var(--bm-blue);border-color:var(--bm-blue)" onclick="verDetalle('${id}')">Ver</button></td>
     </tr>`;
@@ -242,10 +304,209 @@ window.aplicarFiltros = function(){
   document.getElementById('tabla-vacia').classList.toggle('hidden', ordenadas.length>0);
 };
 
+// ══ FICHA DE VISITA (detalle legible) ══
+// Textos de las preguntas: los mismos que ve el director en _registro.html.
+const CJ_PUNTOS = [['parking','Parking'],['entrada','Entrada'],['recepcion','Recepción'],['flujo_circulacion','Flujo de circulación'],
+  ['disponibilidad_producto','Disponibilidad de producto'],['atencion_comercial','Atención comercial'],['paso_cajas','Paso por cajas'],
+  ['carga','Carga'],['salida','Salida']];
+const NPS_VAL = [['facilidadProducto','Facilidad para encontrar el producto'],['atencionEquipo','Atención del equipo'],
+  ['tiempoEsperaCaja','Tiempo de espera en caja'],['disponibilidadProducto','Disponibilidad del producto'],['precio','Precio']];
+const TR_VAL = [['puntualidad','Puntualidad de la entrega'],['estadoMercancia','Estado de la mercancía'],
+  ['tratoTransportista','Trato del transportista'],['informacionEntrega','Información sobre la entrega']];
+const FAMILIAS = [['alimentacionAgua','Alimentación agua'],['accFontaneria','Acc. fontanería'],['accInstalacionesElectricas','Acc. instalaciones eléctricas'],
+  ['cable','Cable'],['mecanismos','Mecanismos'],['adhesivos','Adhesivos'],['herramientasPintor','Herramientas pintor'],
+  ['proteccion','Protección'],['accHerramienta','Acc. herramienta'],['tornilleria','Tornillería']];
+const ATRIB = [['lleno','Lleno'],['sensacionLleno','Sens. lleno'],['balizado','Balizado'],['limpieza','Limpieza'],
+  ['facing','Facing'],['roturas','Roturas'],['fueraDeSitio','Fuera de sitio']];
+const IMPL_PUNTOS = [['cabecera','Cabecera'],['zonasAccion','Zonas de acción'],['ganchosStrips','Ganchos strips'],['cajas','Cajas']];
+const IMPL_PREG = [['directrices','¿Cumple las directrices de la Compañía?'],['ventas','¿% de ventas por encima de la media de la región?'],
+  ['efectividad','¿Efectividad por encima de la media de la región?']];
+const DEPTS = [['cajas','Cajas'],['comercio','Comercio'],['drive','Drive'],['transporte','Transporte'],['logistica','Logística']];
+// [nodo, título, [[clave, pregunta, siEsBueno]]]
+const GESTION_GRUPOS = [
+  ['productividad','Productividad',[['productividad','¿Productividad igual o superior al objetivo de 300.000€?',true]]],
+  ['recursos','Recursos vs afluencia',[['recursosAfluencia','¿Los recursos coinciden con la afluencia?',true]]],
+  ['seguridad','Seguridad',[['epis','¿Es correcto el uso de EPIs?',true],['estibacion','¿Es correcta la estibación?',true],
+    ['cargaClientes','¿Es correcta la carga a clientes?',true],['manipulacion','¿Es correcta la manipulación?',true],['ordenLimpieza','¿Hay orden y limpieza?',true]]],
+  ['ventas','Ventas vs N-1',[['tienda','La tienda, ¿crece vs N-1?',true],['construccion','Construcción',true],['madera','Madera',true],
+    ['pintura','Pintura',true],['ceramica','Cerámica',true],['sanitario','Sanitario',true],['electricidad','Electricidad',true],
+    ['fontaneria','Fontanería',true],['cocinas','Cocinas',true],['totalGeneral','Total general',true]]],
+  ['precios','Precios y cheques',[['preciosForzados','¿Mejora el ratio de precios forzados?',true],['cheques','¿Mejora el ratio de cheques?',true]]],
+  ['demarcaStock','Demarca y stock',[['demarca','¿Demarca sobre la CV inferior al 0,8%?',true],['inventariosRotativos','¿Cumple los inventarios rotativos?',true],
+    ['fiabilidadStock','¿Cumple el ratio de fiabilidad de stock?',true]]],
+  ['workflows','Workflows',[['pendientes','¿Hay workflows pendientes?',false],['vencidos','¿Hay workflows vencidos?',false],
+    ['criticos','¿Hay workflows críticos (más de 30 días)?',false]]],
+];
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fES(iso){ const p=String(iso||'').split('-'); return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : (iso||''); }
+function planHtml(plan, cuando){
+  if(!plan && !cuando) return '';
+  return `<div class="plan">${plan?esc(plan):'<span class="sin-datos">Sin plan de acción</span>'}${cuando?` <strong>· ${fES(cuando)}</strong>`:''}</div>`;
+}
+// Una fila pregunta → respuesta. estado: 'ok' | 'mal' | 'neutro'
+function fila(pregunta, respuesta, estado, plan, cuando){
+  return `<div class="fila ${estado==='mal'?'mal':'bien'}"><div class="q"><span>${esc(pregunta)}</span>
+    <span class="chip ${estado}">${esc(respuesta)}</span></div>${planHtml(plan, cuando)}</div>`;
+}
+function filaSiNo(pregunta, d, siEsBueno){
+  if(!d || (d.cumple!==true && d.cumple!==false)) return '';
+  const bueno = siEsBueno ? d.cumple : !d.cumple;
+  return fila(pregunta, d.cumple?'Sí':'No', bueno?'ok':'mal', d.plan, d.fecha||d.cuando);
+}
+function filaTexto(pregunta, valor, plan, cuando){
+  return (valor || plan) ? fila(pregunta, valor||'—', 'neutro', plan, cuando) : '';
+}
+function grupo(titulo, filasHtml){
+  if(!filasHtml) return '';
+  const hayMal = filasHtml.includes('class="fila mal');
+  return `<div class="grupo${hayMal?'':' sin-mal'}"><h3>${esc(titulo)}</h3>${filasHtml}</div>`;
+}
+const VACIO = '<div class="grupo"><span class="sin-datos">Todavía no se ha rellenado este bloque.</span></div>';
+
+function fichaCliente(c){
+  if(!c) return VACIO;
+  let h='';
+  const cj=c.customerJourney||{};
+  h+=grupo('Customer Journey', CJ_PUNTOS.map(([k,l])=>{
+    const d=cj[k]; if(!d) return '';
+    return d.ejeMejora ? fila(l,'Eje de mejora','mal',d.que,d.cuando) : fila(l,'Correcto','ok');
+  }).join(''));
+  const tc=c.tiempoCompra||{};
+  [['drive','Cliente Drive'],['tienda','Cliente Tienda'],['mixto','Cliente Mixto']].forEach(([k,l])=>{
+    const d=tc[k]; if(!d) return;
+    let f='';
+    const hr=d.horario||{};
+    if(hr.horaEntrada||hr.horaSalida) f+=fila('Hora entrada – salida', `${hr.horaEntrada||'?'} – ${hr.horaSalida||'?'}`, 'neutro');
+    const n=d.nps;
+    if(n && n.tipoCliente==='Compró'){
+      const nota=Number(n.notaRecomendacion);
+      if(n.notaRecomendacion!=='' && n.notaRecomendacion!=null) f+=fila('¿Recomendaría la tienda? (0-10)', n.notaRecomendacion, nota>=9?'ok':(nota<=6?'mal':'neutro'));
+      NPS_VAL.forEach(([vk,vl])=>{ const v=(n.valoraciones||{})[vk]; if(v) f+=fila(vl, v, /malo/i.test(v)?'mal':(/bueno|excelente/i.test(v)?'ok':'neutro')); });
+      f+=fila('¿Primera compra?', n.primeraCompra?'Sí':'No', 'neutro');
+      if(n.mejorar) f+=fila('Qué mejoraría', '', 'neutro', n.mejorar);
+    } else if(n && n.tipoCliente==='No compró'){
+      f+=fila('¿Compró?', 'No compró', 'mal', [n.motivo, n.porque].filter(Boolean).join(' — '));
+      if(n.probabilidadVolver) f+=fila('Probabilidad de volver', n.probabilidadVolver, 'neutro');
+      if(n.queMejorar) f+=fila('Qué tendríamos que mejorar', '', 'neutro', n.queMejorar);
+      f+=fila('¿Encontró ayuda?', n.encontroAyuda?'Sí':'No', n.encontroAyuda?'ok':'mal');
+    }
+    h+=grupo(l, f);
+  });
+  const cap=c.captacion||{};
+  h+=grupo('Captación',
+    filaSiNo('¿Cumple el objetivo semanal de cheques de captación?', cap.cheques, true)
+    + [1,2,3].map(i=>filaSiNo(`¿Crece el nº de clientes vs semana anterior? (semana -${i})`, cap['creceSemana'+i], true)).join('')
+    + (cap.tasaConversion ? filaTexto('Tasa de conversión de cheques', cap.tasaConversion.valor, cap.tasaConversion.plan, cap.tasaConversion.fecha) : ''));
+  const comp=c.competencia ? Object.values(c.competencia).filter(Boolean) : [];
+  h+=grupo('Competencia', comp.map(d=>d.competidor||d.observaciones||d.acciones ?
+    fila(d.competidor||'Competidor', '', 'neutro', [d.observaciones, d.acciones && 'Acciones: '+d.acciones].filter(Boolean).join(' — ')) : '').join(''));
+  const t=c.transporte;
+  if(t){
+    let f='';
+    if(t.tipoCliente) f+=fila('Tipo de cliente', t.tipoCliente, 'neutro');
+    TR_VAL.forEach(([vk,vl])=>{ const v=(t.valoraciones||{})[vk]; if(v) f+=fila(vl, v, /malo/i.test(v)?'mal':(/bueno|excelente/i.test(v)?'ok':'neutro')); });
+    f+= t.entregaSinIncidencias ? fila('Entrega completa y sin incidencias','Sí','ok') : fila('Entrega completa y sin incidencias','Hubo incidencia','mal', t.incidenciaDetalle);
+    if(t.npsTransporte!=='' && t.npsTransporte!=null) f+=fila('NPS transporte (0-10)', t.npsTransporte, Number(t.npsTransporte)>=9?'ok':(Number(t.npsTransporte)<=6?'mal':'neutro'));
+    if(t.queMejorar) f+=fila('Qué mejoraría del transporte', '', 'neutro', t.queMejorar);
+    h+=grupo('Transporte', f);
+  }
+  const ca=c.cartera||{}, m=ca.metricas||{}, cp=ca.clientePrincipal;
+  h+=grupo('Cartera',
+    (m.sinCompra?filaTexto('Clientes sin compra en el mes', m.sinCompra.numero, m.sinCompra.plan, m.sinCompra.fecha):'')
+    + filaTexto('Consumo del crédito concedido', m.consumoCredito)
+    + (m.pocasSecciones?filaTexto('% clientes con compras en 3 secciones o menos', m.pocasSecciones.valor, m.pocasSecciones.plan, m.pocasSecciones.fecha):'')
+    + filaTexto('Clientes en riesgo (sin compra la semana anterior)', m.clientesRiesgo)
+    + filaTexto('% de clientes que generan el 50% de la venta', m.clientes50pct)
+    + (cp && (cp.nombre||cp.obra) ? fila('Cliente principal: '+(cp.nombre||'')+(cp.obra?' · Obra: '+cp.obra:''), '', 'neutro',
+        [cp.observaciones, cp.acciones && 'Acciones: '+cp.acciones].filter(Boolean).join(' — ')) : ''));
+  return h || VACIO;
+}
+
+function fichaSecciones(s){
+  if(!s) return VACIO;
+  let h='';
+  const r=s.rupturas;
+  if(r) h+=grupo('Rupturas',
+    filaTexto('% de rupturas + futuras rupturas', r.porcentaje, r.planTrabajo, r.cuandoTrabajo)
+    + filaTexto('Familias críticas', r.familiasCriticas, r.planAccion, r.cuandoAccion));
+  const fam=s.familias||{};
+  const filasFam = FAMILIAS.filter(([k])=>fam[k]);
+  if(filasFam.length){
+    const peor = d => Math.min(...ATRIB.map(([a])=>Number(d[a])||9));
+    h+=`<div class="grupo${filasFam.some(([k])=>peor(fam[k])<=2)?'':' sin-mal'}"><h3>Familias de lineal (1 = mal · 5 = bien)</h3><div class="scroll-x"><table class="tabla-fam">
+      <thead><tr><th>Familia</th>${ATRIB.map(([,l])=>`<th>${l}</th>`).join('')}</tr></thead><tbody>
+      ${filasFam.map(([k,l])=>{ const d=fam[k];
+        return `<tr class="fila ${peor(d)<=2?'mal':'bien'}"><td><strong>${esc(l)}</strong></td>${ATRIB.map(([a])=>`<td>${d[a]?`<span class="nota n${esc(d[a])}">${esc(d[a])}</span>`:'—'}</td>`).join('')}</tr>
+          ${d.plan||d.cuando?`<tr class="fila ${peor(d)<=2?'mal':'bien'}"><td colspan="8" style="text-align:left;padding-top:0">${planHtml(d.plan,d.cuando)}</td></tr>`:''}`;
+      }).join('')}</tbody></table></div></div>`;
+  }
+  const imp=s.implantacion||{};
+  IMPL_PUNTOS.forEach(([p,pl])=>{
+    h+=grupo('Implantación — '+pl, IMPL_PREG.map(([q,ql])=>filaSiNo(ql, imp[`${p}_${q}`], true)).join(''));
+  });
+  return h || VACIO;
+}
+
+function fichaGestion(g){
+  if(!g) return VACIO;
+  let h='';
+  h+=grupo('Productividad', filaSiNo(GESTION_GRUPOS[0][2][0][1], (g.productividad||{}).productividad, true));
+  const ho=g.horas||{};
+  const nums=(a,b)=>[a&&a.valor&&'Personas: '+a.valor, b&&b.valor&&'Horas: '+b.valor].filter(Boolean).join(' · ');
+  h+=grupo('Horas',
+    (ho.excesos ? fila('¿Hay personas con excesos de horas?', ho.excesos.cumple?'Sí':'No', ho.excesos.cumple?'mal':'ok',
+        [nums(ho.excesosPersonas, ho.excesosHoras), ho.excesos.plan].filter(Boolean).join(' — '), ho.excesos.fecha) : '')
+    + (ho.defecto ? fila('¿Hay personas con defecto de horas?', ho.defecto.cumple?'Sí':'No', ho.defecto.cumple?'mal':'ok',
+        [nums(ho.defectoPersonas, ho.defectoHoras), ho.defecto.plan].filter(Boolean).join(' — '), ho.defecto.fecha) : ''));
+  const it=g.indiceTienda;
+  if(it) h+=grupo('Índice de la tienda', it.valor ? fila('¿El índice de la tienda es?', it.valor, /peor/i.test(it.valor)?'mal':(/mejor/i.test(it.valor)?'ok':'neutro'), it.plan, it.cuando) : '');
+  h+=grupo('Recursos vs afluencia', filaSiNo(GESTION_GRUPOS[1][2][0][1], (g.recursos||{}).recursosAfluencia, true));
+  [['horasPunta','Horas punta — ¿todos disponibles para el cliente?'],['horasValle','Horas valle — ¿tareas acordes a la situación?']].forEach(([nodo,titulo])=>{
+    const d=g[nodo]||{};
+    h+=grupo(titulo, DEPTS.map(([k,l])=>{
+      const n=(d[k+'Numero']||{}).valor;
+      const b=d[k];
+      if(!b && !n) return '';
+      if(!b) return fila(l+(n?` (${n})`:''), '—', 'neutro');
+      return fila(l+(n?` — ${n}`:''), b.cumple?'Sí':'No', b.cumple?'ok':'mal', b.plan, b.fecha);
+    }).join(''));
+  });
+  GESTION_GRUPOS.slice(2).forEach(([nodo,titulo,items])=>{
+    const d=g[nodo]||{};
+    h+=grupo(titulo, items.map(([k,l,bueno])=>filaSiNo(l, d[k], bueno)).join(''));
+  });
+  return h || VACIO;
+}
+
+function contarMal(html){ return (html.match(/class="fila mal/g)||[]).length - (html.match(/<tr class="fila mal"><td colspan/g)||[]).length; }
+
 window.verDetalle = function(id){
-  document.getElementById('detalle-contenido').textContent = JSON.stringify(visitasCache[id], null, 2);
+  const v = visitasCache[id] || {};
+  const c = v.cabecera || {};
+  document.getElementById('ficha-titulo').textContent = `${c.tienda||'?'} · ${fES(c.fecha)}`;
+  document.getElementById('ficha-meta').innerHTML =
+    `Director Regional: <strong>${esc(c.director||'—')}</strong> · Director de Tienda: <strong>${esc(c.directorTienda||'—')}</strong><br>`
+    + `${esc(c.tipoVisita||'')} · ${c.estado==='completada'?'<span class="badge badge-completada">Completada</span>':'<span class="badge badge-pendiente">Pendiente</span>'}`
+    + (c.origen==='Forms'?' <span style="font-size:.72rem;color:#999">(empezada en Forms)</span>':'');
+  const bloques = {cliente: fichaCliente(v.cliente), secciones: fichaSecciones(v.secciones), gestion: fichaGestion(v.gestion)};
+  Object.entries(bloques).forEach(([k,html])=>{
+    document.getElementById('ficha-'+k).innerHTML = html;
+    const n = contarMal(html), el = document.getElementById('n-'+k);
+    el.textContent = n; el.classList.toggle('cero', n===0);
+  });
+  document.getElementById('detalle-contenido').textContent = JSON.stringify(v, null, 2);
+  document.querySelector('.ficha-json').open = false;
+  verPestana('cliente');
   document.getElementById('modal-detalle').classList.add('show');
 };
+window.verPestana = function(tab){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('activa', b.dataset.tab===tab));
+  ['cliente','secciones','gestion'].forEach(k=>document.getElementById('ficha-'+k).classList.toggle('hidden', k!==tab));
+  document.querySelector('.ficha-body').scrollTop = 0;
+};
+window.cerrarFicha = function(){ document.getElementById('modal-detalle').classList.remove('show'); };
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarFicha(); });
 </script>
 </body>
 </html>
