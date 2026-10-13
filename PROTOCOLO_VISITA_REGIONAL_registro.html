@@ -56,8 +56,6 @@
   .toast.show{opacity:1}
   .hidden{display:none !important}
   /* Setup overlay */
-  #setup-overlay{position:fixed;inset:0;background:rgba(20,24,27,.85);display:flex;
-    align-items:center;justify-content:center;z-index:100;padding:16px}
   .setup-box{background:var(--blanco);border-radius:var(--radius);padding:26px;width:100%;max-width:420px}
   .setup-box h2{color:var(--bm-blue);margin:0 0 6px}
   .setup-box p{font-size:.82rem;color:#666;margin:0 0 16px}
@@ -72,21 +70,45 @@
   .modal-back.show{display:flex}
   .modal{background:var(--blanco);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;
     max-height:80vh;overflow:auto}
+  /* Acceso (login) */
+  #login-overlay{position:fixed;inset:0;background:var(--bg);display:none;align-items:flex-start;justify-content:center;
+    z-index:100;padding:40px 16px;overflow:auto}
+  #login-overlay.show{display:flex}
+  .login-box{background:var(--blanco);border-radius:var(--radius);box-shadow:var(--shadow);width:100%;max-width:380px;overflow:hidden}
+  .login-head{background:var(--bm-blue);color:#fff;padding:16px 20px}
+  .login-head b{display:block;font-size:1rem}
+  .login-head span{font-size:.75rem;opacity:.85}
+  .login-body{padding:20px}
+  .login-body .btn{width:100%;margin-top:16px;padding:13px}
+  .login-msg{font-size:.8rem;border-radius:8px;padding:10px 12px;margin-top:12px;display:none;line-height:1.4}
+  .login-msg.err{display:block;background:#fde8e8;color:var(--bm-red)}
+  .login-msg.ok{display:block;background:#e3f4e8;color:#1e7a3c}
+  .login-hint{font-size:.75rem;color:#777;margin:16px 0 0;line-height:1.4}
+  .usuario{font-size:.72rem;opacity:.9;text-align:right;line-height:1.3}
+  .usuario button{background:none;border:none;color:#fff;text-decoration:underline;font-size:.72rem;cursor:pointer;padding:0}
+  .tabla-usu{width:100%;border-collapse:collapse;font-size:.78rem}
+  .tabla-usu th{text-align:left;font-size:.68rem;color:#777;padding:6px;border-bottom:2px solid var(--gris-borde)}
+  .tabla-usu td{padding:6px;border-bottom:1px solid var(--gris-borde);vertical-align:top}
+  .chip-u{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--bm-blue-light);color:var(--bm-blue)}
+  .chip-u.ok{background:#e3f4e8;color:#1e7a3c} .chip-u.pend{background:#fdf0d5;color:#a86a00} .chip-u.off{background:#eee;color:#777}
 </style>
 </head>
 <body>
 
-<!-- ══ SETUP: configuración Firebase (primera vez, se guarda en este navegador) ══ -->
-<div id="setup-overlay">
-  <div class="setup-box">
-    <h2>⚙️ Configuración Firebase</h2>
-    <p>Proyecto <strong>separado</strong> del de Visor Transporte — pega aquí los datos de este nuevo proyecto (Firebase Console → Configuración del proyecto → Tus apps → SDK).</p>
-    <label>API Key</label><input type="text" id="s-apikey" placeholder="AIza...">
-    <label>Database URL</label><input type="text" id="s-dburl" placeholder="https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app">
-    <label>Project ID</label><input type="text" id="s-pid" placeholder="tu-proyecto">
-    <label>App ID</label><input type="text" id="s-appid" placeholder="1:xxxx:web:xxxx">
-    <div class="setup-err" id="setup-err"></div>
-    <button class="btn" style="width:100%;margin-top:12px" onclick="conectarFirebase()">Conectar y guardar</button>
+<!-- ══ ACCESO: correo de empresa + contraseña (se pide una vez por dispositivo) ══ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-head"><b>📋 Protocolo de Visita Regional</b><span>BigMat · acceso con tu correo de empresa</span></div>
+    <div class="login-body">
+      <label style="margin-top:0">Correo de empresa</label>
+      <input type="text" id="login-email" autocomplete="username" inputmode="email" placeholder="nombre.apellido@bigmat.biz">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter') entrar()">
+      <button class="btn" id="login-btn" onclick="entrar()">Entrar</button>
+      <div style="text-align:center;margin-top:14px"><button class="link-btn" style="font-size:.82rem" onclick="olvideContrasena()">He olvidado mi contraseña</button></div>
+      <div class="login-msg" id="setup-err"></div>
+      <p class="login-hint">Solo se pide la primera vez en este dispositivo. Si aún no tienes contraseña, escribe tu correo y pulsa «He olvidado mi contraseña»: te llegará un enlace para crearla.</p>
+    </div>
   </div>
 </div>
 
@@ -96,6 +118,7 @@
     <div class="sub">Registro de visita — Cliente, Secciones y Gestión</div>
   </div>
   <div class="conn"><span class="conn-dot" id="cdot"></span><span id="ctxt">Conectando…</span></div>
+  <div class="usuario hidden" id="usuario-info"><span id="usuario-nombre"></span><br><button onclick="cerrarSesion()">Cerrar sesión</button></div>
 </header>
 
 <main>
@@ -108,7 +131,12 @@
       <button class="btn" onclick="continuarVisitaPendiente()">Continuar esa visita ▸</button>
       <button class="btn btn-ghost" style="margin-left:8px" onclick="descartarVisitaPendiente()">Empezar una nueva</button>
     </div>
-    <div class="card">
+    <div class="card hidden" id="aviso-consulta">
+      <h2>Tu usuario es de consulta</h2>
+      <p style="font-size:.88rem;margin:0 0 12px">Puedes ver todas las visitas en el Resumen, pero no registrar visitas.</p>
+      <a class="btn" href="PROTOCOLO_VISITA_REGIONAL_resumen.html" style="display:inline-block;text-decoration:none">Abrir el Resumen ▸</a>
+    </div>
+    <div class="card" id="card-datos-visita">
       <h2>1. Datos de la visita</h2>
       <div class="row">
         <div>
@@ -146,11 +174,13 @@
     </div>
 
     <!-- Administración: plegada y discreta, fuera de la vista de los directores -->
-    <details class="admin-plegable">
+    <details class="admin-plegable hidden" id="admin-plegable">
       <summary>Administración</summary>
       <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
-        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectoresRegionales)">⚙️ Gestionar Directores Regionales</button>
-        <button class="link-btn" onclick="pedirPasswordAdmin(abrirModalDirectores)">⚙️ Gestionar Directores de Tienda</button>
+        <button class="link-btn" onclick="abrirModalUsuarios()">👥 Gestionar usuarios</button>
+        <button class="link-btn" onclick="recalcularResumen()">🔄 Recalcular resumen</button>
+        <button class="link-btn" onclick="abrirModalDirectoresRegionales()">⚙️ Gestionar Directores Regionales</button>
+        <button class="link-btn" onclick="abrirModalDirectores()">⚙️ Gestionar Directores de Tienda</button>
       </div>
     </details>
   </section>
@@ -337,17 +367,29 @@
   </div>
 </div>
 
-<!-- ══ MODAL: contraseña de administración (gestionar listas) ══ -->
-<div class="modal-back" id="modal-admin-pass">
-  <div class="modal" style="max-width:340px">
-    <h2 style="color:var(--bm-blue);margin-top:0">🔒 Acceso restringido</h2>
-    <p style="font-size:.82rem;color:#777;margin:0 0 12px">Introduce la contraseña para gestionar las listas de directores.</p>
-    <input type="password" id="admin-pass-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter') verificarAdminPass()">
-    <p class="setup-err" id="admin-pass-err" style="margin-top:8px">❌ Contraseña incorrecta</p>
-    <div style="margin-top:12px;display:flex;gap:8px">
-      <button class="btn" onclick="verificarAdminPass()">Entrar</button>
-      <button class="btn btn-ghost" onclick="cerrarModalAdminPass()">Cancelar</button>
+<!-- ══ MODAL: gestionar usuarios (solo administración) ══ -->
+<div class="modal-back" id="modal-usuarios">
+  <div class="modal" style="max-width:880px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <h2 style="color:var(--bm-blue);margin:0">Usuarios</h2>
+      <span id="usu-resumen" style="font-size:.78rem;color:#777"></span>
+      <button class="link-btn" style="margin-left:auto;font-size:1.2rem;text-decoration:none" onclick="cerrarModalUsuarios()">✕</button>
     </div>
+    <div style="overflow-x:auto;margin-top:10px;max-height:42vh">
+      <table class="tabla-usu"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Tiendas</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="usu-lista"></tbody></table>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="enviarCorreoPendientes()">✉️ Enviar el correo de contraseña a todos los que aún no han entrado</button>
+    <details style="margin-top:14px">
+      <summary style="cursor:pointer;font-weight:700;font-size:.85rem;color:var(--bm-blue)">+ Añadir usuarios</summary>
+      <p style="font-size:.75rem;color:#777;margin:8px 0">Una línea por persona: <b>Nombre | correo | rol | tiendas | nombre en la lista</b>.
+        Rol: <i>regional</i>, <i>tienda</i>, <i>consulta</i> o <i>admin</i>. Tiendas separadas por comas (solo regional y tienda).
+        «Nombre en la lista» = como aparece en los desplegables de Director Regional o Director de Tienda.</p>
+      <textarea id="usu-nuevos" style="min-height:120px;font-family:monospace;font-size:.75rem" placeholder="Walter Casteluche | walter.casteluche@bigmatlaplataforma.es | tienda | HOSPITALET | Walter Casteluche"></textarea>
+      <label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" id="usu-enviar" style="width:auto"> Enviar ya el correo para crear la contraseña</label>
+      <button class="btn btn-sm" style="margin-top:8px" onclick="anadirUsuarios()">Añadir</button>
+      <div id="usu-log" style="font-size:.75rem;margin-top:8px;white-space:pre-wrap"></div>
+    </details>
   </div>
 </div>
 
@@ -377,6 +419,8 @@ const TIENDAS_POR_REGIONAL = {
   'Santiago Agullo': [...TIENDAS_CATALUNA, ...TIENDAS_ANDALUCIA],
   'Manuel De Dios': [...TIENDAS_MADRID, ...TIENDAS_CYL],
 };
+const REGIONAL_DE_TIENDA = {};
+Object.entries(TIENDAS_POR_REGIONAL).forEach(([r, ts]) => ts.forEach(t => { REGIONAL_DE_TIENDA[t] = r; }));
 
 const CUSTOMER_JOURNEY_PUNTOS = [
   {key:"parking", label:"Parking"},
@@ -391,6 +435,7 @@ const CUSTOMER_JOURNEY_PUNTOS = [
 ];
 
 let db=null, _ref,_onValue,_set,_push,_child,_get,_query,_orderByChild,_equalTo;
+let fbauthMod=null, authInst=null, _initializeApp=null, perfil=null, claveUsuario=null, appArrancada=false, mensajeLogin='';
 let visitaActualId=null;
 let directoresCache={};
 let directoresRegionalesCache={};
@@ -409,6 +454,13 @@ let verTodasTiendas = false;
 function poblarTiendas(valorDeseado){
   const sel=document.getElementById('c-tienda');
   const deseado = valorDeseado!==undefined ? valorDeseado : sel.value;
+  const permitidas = tiendasDelUsuario();   // regional y director de tienda: solo las suyas
+  if(permitidas){
+    const lista = permitidas;
+    sel.innerHTML=(lista.length>1?'<option value="">Selecciona</option>':'')+lista.map(t=>`<option>${t}</option>`).join('');
+    sel.value = lista.includes(deseado) ? deseado : (lista.length===1 ? lista[0] : '');
+    return;
+  }
   const propias = TIENDAS_POR_REGIONAL[document.getElementById('c-director').value];
   let lista = (propias && !verTodasTiendas) ? propias : TIENDAS;
   if(deseado && !lista.includes(deseado)) lista = TIENDAS;
@@ -424,29 +476,98 @@ window.cambioDirectorRegional = function(){
 window.cambioTienda = function(){
   const sel=document.getElementById('c-tienda');
   if(sel.value==='__todas__'){ verTodasTiendas = true; poblarTiendas(''); return; }
+  aplicarPerfilCabecera();
   comprobarPendientesTienda();
 };
 document.getElementById('c-fecha').value = hoy();
 poblarTiendas();
 
-// ══ FIREBASE SETUP ══
-function savedCfg(){ try{ const c=localStorage.getItem('bm_protocolo_visita_firebase'); return c?JSON.parse(c):null; }catch(e){ return null; } }
-window.conectarFirebase=()=>{
-  const apiKey=document.getElementById('s-apikey').value.trim();
-  const dbURL=document.getElementById('s-dburl').value.trim();
-  const pid=document.getElementById('s-pid').value.trim();
-  const appId=document.getElementById('s-appid').value.trim();
-  const errEl=document.getElementById('setup-err');
-  if(!apiKey||!dbURL||!pid||!appId){ errEl.textContent='Rellena todos los campos.'; errEl.style.display='block'; return; }
-  errEl.style.display='none';
-  const cfg={apiKey,databaseURL:dbURL,projectId:pid,appId};
-  localStorage.setItem('bm_protocolo_visita_firebase',JSON.stringify(cfg));
-  iniciarFirebase(cfg);
+// ══ FIREBASE + ACCESO ══
+// Cada persona entra con su correo de empresa y su contraseña (Firebase Auth). Sus permisos están en
+// usuarios/<correo con las comas en lugar de puntos>: rol (admin/regional/tienda/consulta), tiendas y activo.
+// Las reglas de la base de datos aplican esos mismos permisos: esto solo adapta la pantalla.
+const ADMINS = ['rossy.cuenca@bigmat.biz','li.lin@bigmat.biz'];
+// Recordatorio de visita a medias en este dispositivo: uno por usuario (un móvil puede ser compartido).
+function claveVisitaEnCurso(){ return 'bm_visita_en_curso_'+(claveUsuario||''); }
+function claveDeEmail(e){ return String(e||'').trim().toLowerCase().replace(/\./g, ','); }
+function esAdmin(){ return !!perfil && perfil.rol==='admin'; }
+function tiendasDelUsuario(){
+  if(!perfil || perfil.rol==='admin' || perfil.rol==='consulta') return null;
+  const t = perfil.tiendas || {};
+  return TIENDAS.filter(x=>t[x]===true).concat(Object.keys(t).filter(x=>t[x]===true && !TIENDAS.includes(x)));
+}
+function mostrarErrorSetup(msg){ mostrarMensajeLogin(msg, 'err'); console.error('[Protocolo Visita Firebase]', msg); }
+function mostrarMensajeLogin(msg, tipo){
+  const el=document.getElementById('setup-err');
+  el.textContent=msg||''; el.className='login-msg'+(msg?' '+tipo:'');
+}
+function mostrarLogin(){
+  document.getElementById('login-overlay').classList.add('show');
+  document.getElementById('usuario-info').classList.add('hidden');
+  if(mensajeLogin){ mostrarMensajeLogin(mensajeLogin, 'err'); mensajeLogin=''; }
+}
+const ERRORES_ACCESO = {
+  'auth/invalid-credential':'Correo o contraseña incorrectos.',
+  'auth/wrong-password':'Correo o contraseña incorrectos.',
+  'auth/user-not-found':'Correo o contraseña incorrectos.',
+  'auth/invalid-email':'El correo no es válido.',
+  'auth/missing-password':'Escribe tu contraseña.',
+  'auth/too-many-requests':'Demasiados intentos. Espera unos minutos o pulsa «He olvidado mi contraseña».',
+  'auth/network-request-failed':'Sin conexión. Revisa la cobertura e inténtalo de nuevo.',
+  'auth/user-disabled':'Tu usuario está desactivado. Contacta con Rossy Cuenca.',
 };
-function mostrarErrorSetup(msg){
-  const errEl=document.getElementById('setup-err');
-  errEl.textContent='❌ '+msg; errEl.style.display='block';
-  console.error('[Protocolo Visita Firebase]', msg);
+window.entrar = async function(){
+  if(!authInst){ mostrarMensajeLogin('Conectando… inténtalo en unos segundos.', 'err'); return; }
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  if(!email){ mostrarMensajeLogin('Escribe tu correo de empresa.', 'err'); return; }
+  const btn=document.getElementById('login-btn'); btn.disabled=true; btn.textContent='Entrando…';
+  try{ await fbauthMod.signInWithEmailAndPassword(authInst, email, pass); mostrarMensajeLogin(''); }
+  catch(e){ mostrarMensajeLogin(ERRORES_ACCESO[e.code] || ('No se pudo entrar: '+e.message), 'err'); }
+  finally{ btn.disabled=false; btn.textContent='Entrar'; }
+};
+window.olvideContrasena = async function(){
+  const email=document.getElementById('login-email').value.trim();
+  if(!email){ mostrarMensajeLogin('Escribe primero tu correo de empresa y vuelve a pulsar «He olvidado mi contraseña».', 'err'); return; }
+  try{
+    await fbauthMod.sendPasswordResetEmail(authInst, email);
+    mostrarMensajeLogin('Si ese correo tiene usuario, te hemos enviado un enlace para crear tu contraseña. Revisa también el correo no deseado.', 'ok');
+  }catch(e){ mostrarMensajeLogin(ERRORES_ACCESO[e.code] || ('No se pudo enviar el correo: '+e.message), 'err'); }
+};
+window.cerrarSesion = async function(){
+  borrarVisitaPendienteGuardada();
+  await fbauthMod.signOut(authInst);
+  location.reload();
+};
+async function alEntrar(user){
+  const email=(user.email||'').toLowerCase();
+  claveUsuario=claveDeEmail(email);
+  let p=null;
+  try{ p=(await _get(ref(`usuarios/${claveUsuario}`))).val(); }catch(e){ console.error('[Protocolo Visita] perfil', e); }
+  if(ADMINS.includes(email)) p = Object.assign({nombre:email, email}, p||{}, {rol:'admin', activo:true});
+  if(!p || p.activo!==true){
+    mensajeLogin='Tu usuario no tiene acceso a esta aplicación. Contacta con Rossy Cuenca (rossy.cuenca@bigmat.biz).';
+    await fbauthMod.signOut(authInst);
+    return;
+  }
+  perfil=p;
+  document.getElementById('login-overlay').classList.remove('show');
+  document.getElementById('usuario-nombre').textContent = perfil.nombre || email;
+  document.getElementById('usuario-info').classList.remove('hidden');
+  registrarAcceso(email);
+  arrancarApp();
+}
+async function registrarAcceso(email){
+  // Cada usuario solo puede ESCRIBIR su acceso (leerlo es de administración): se escribe campo a campo.
+  try{
+    const base=`accesos/${claveUsuario}`;
+    const ahora=new Date().toISOString();
+    const disp=navigator.userAgent.replace(/\s+/g,' ').slice(0,160);
+    const k=Array.from(disp).reduce((h,c)=>((h*31+c.charCodeAt(0))>>>0),7).toString(36);
+    await _set(ref(`${base}/email`), email);
+    await _set(ref(`${base}/ultimo`), ahora);
+    await _set(ref(`${base}/dispositivos/${k}`), {ua:disp, ultimo:ahora});
+  }catch(e){ console.error('[Protocolo Visita] acceso', e); }
 }
 async function iniciarFirebase(cfg){
   let initializeApp, fbdb, fbauth;
@@ -455,38 +576,30 @@ async function iniciarFirebase(cfg){
     fbdb = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/database/+esm');
     fbauth = await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/auth/+esm');
   }catch(e){
-    mostrarErrorSetup('No se pudo cargar el SDK de Firebase: '+e.message);
+    document.getElementById('login-overlay').classList.add('show');
+    mostrarErrorSetup('No se pudo cargar la aplicación. Revisa la conexión y recarga la página. ('+e.message+')');
     return;
   }
   _ref=fbdb.ref; _onValue=fbdb.onValue; _set=fbdb.set; _push=fbdb.push; _child=fbdb.child;
   _get=fbdb.get; _query=fbdb.query; _orderByChild=fbdb.orderByChild; _equalTo=fbdb.equalTo;
+  _initializeApp=initializeApp; fbauthMod=fbauth;
 
-  let app;
-  try{ app=initializeApp(cfg); }
-  catch(e){
-    if(e.code==='app/duplicate-app'){ localStorage.removeItem('bm_protocolo_visita_firebase'); location.reload(); return; }
-    mostrarErrorSetup('Error al inicializar: '+e.message);
-    localStorage.removeItem('bm_protocolo_visita_firebase');
-    return;
-  }
-  try{ db=fbdb.getDatabase(app); }
-  catch(e){
-    mostrarErrorSetup('Error de conexión: '+e.message+' — revisa la Database URL');
-    localStorage.removeItem('bm_protocolo_visita_firebase');
-    return;
-  }
-  try{
-    const auth = fbauth.getAuth(app);
-    await fbauth.signInAnonymously(auth);
-  }catch(e){
-    mostrarErrorSetup('Error de autenticación: '+e.message);
-    return;
-  }
-
-  document.getElementById('setup-overlay').style.display='none';
-
+  const app=initializeApp(cfg);
+  db=fbdb.getDatabase(app);
+  authInst=fbauth.getAuth(app);
+  authInst.languageCode='es';
+  fbauth.onAuthStateChanged(authInst, user=>{
+    if(!user || user.isAnonymous){ perfil=null; mostrarLogin(); return; }
+    alEntrar(user);
+  });
+}
+// Una vez identificado el usuario: conexión, listas y visitas pendientes.
+function arrancarApp(){
+  aplicarPerfilCabecera();
+  if(appArrancada) return;
+  appArrancada=true;
   const connTimeout=setTimeout(()=>{
-    document.getElementById('ctxt').textContent='Sin respuesta — revisa URL/Reglas';
+    document.getElementById('ctxt').textContent='Sin respuesta — revisa la conexión';
   },8000);
   _onValue(ref('.info/connected'), s=>{
     clearTimeout(connTimeout);
@@ -494,26 +607,54 @@ async function iniciarFirebase(cfg){
     document.getElementById('cdot').classList.toggle('online', !!ok);
     document.getElementById('ctxt').textContent = ok?'En línea':'Sin conexión';
   });
-
   _onValue(ref('directores'), s=>{
     directoresCache = s.val()||{};
     poblarDirectores();
     renderListaDirectoresModal();
+    aplicarPerfilCabecera();
   });
   _onValue(ref('directoresRegionales'), s=>{
     directoresRegionalesCache = s.val()||{};
     poblarDirectoresRegionales();
     renderListaDirectoresRegionalesModal();
+    aplicarPerfilCabecera();
   });
-
-  comprobarVisitaPendiente();
-  comprobarPendientesTienda();
+  if(perfil.rol!=='consulta') comprobarVisitaPendiente();
 }
-
+// Adapta la cabecera al usuario: regional = él mismo y sus tiendas; director de tienda = su tienda,
+// él mismo y el regional de esa tienda; consulta = aviso con enlace al Resumen; admin = todo libre.
+function aplicarPerfilCabecera(){
+  if(!perfil) return;
+  const rol=perfil.rol;
+  document.getElementById('admin-plegable').classList.toggle('hidden', rol!=='admin');
+  document.getElementById('aviso-consulta').classList.toggle('hidden', rol!=='consulta');
+  document.getElementById('card-datos-visita').classList.toggle('hidden', rol==='consulta');
+  const selDir=document.getElementById('c-director'), selTie=document.getElementById('c-tienda'), selDT=document.getElementById('c-directortienda');
+  const fijar=(sel, valor)=>{
+    if(valor && ![...sel.options].some(o=>o.value===valor)) sel.insertAdjacentHTML('beforeend', `<option>${valor}</option>`);
+    if(valor) sel.value=valor;
+    sel.disabled=true;
+  };
+  if(rol==='regional'){
+    fijar(selDir, perfil.directorRegional);
+    selTie.disabled=false; selDT.disabled=false;
+  } else if(rol==='tienda'){
+    const antes=selTie.value;
+    poblarTiendas();
+    if(selTie.value!==antes && selTie.value) setTimeout(comprobarPendientesTienda, 0);
+    fijar(selDir, REGIONAL_DE_TIENDA[selTie.value] || '');
+    if(!selTie.value) selDir.value='';
+    fijar(selDT, perfil.directorTienda);
+    selTie.disabled = (tiendasDelUsuario()||[]).length<=1;
+  } else {
+    selDir.disabled=false; selTie.disabled=false; selDT.disabled=false;
+  }
+  if(rol==='regional') poblarTiendas();
+}
 // ══ RECUPERAR VISITA EN CURSO (si se cerró el navegador a mitad) ══
 function comprobarVisitaPendiente(){
   let guardado=null;
-  try{ const raw=localStorage.getItem('bm_visita_en_curso'); guardado = raw?JSON.parse(raw):null; }catch(e){}
+  try{ const raw=localStorage.getItem(claveVisitaEnCurso()); guardado = raw?JSON.parse(raw):null; }catch(e){}
   if(!guardado || !guardado.visitaId) return;
   _onValue(ref(`visitas/${guardado.visitaId}/cabecera`), s=>{
     const cab = s.val();
@@ -593,6 +734,8 @@ async function marcarVisitaCompletada(){
     await _set(ref(`visitas/${visitaActualId}/cabecera/estado`), 'completada');
     await _set(ref(`visitas/${visitaActualId}/cabecera/completado`), new Date().toISOString());
     await _set(ref(`visitas/${visitaActualId}/cabecera/pendienteTienda`), null);
+    clearTimeout(_tIndice);
+    await actualizarIndiceVisita(visitaActualId);
   }catch(e){ showToast('⚠ No se pudo marcar la visita como completada: '+e.message, 4000); }
 }
 
@@ -786,13 +929,7 @@ const DEFAULT_FIREBASE_CONFIG = {
   projectId: "bigmat-protocolo-visita",
   appId: "1:550029945101:web:e52d621c118dd9ac816844",
 };
-(function(){
-  let cfg=null;
-  try{ cfg=savedCfg(); }catch(e){}
-  if(!cfg) cfg = DEFAULT_FIREBASE_CONFIG;
-  document.getElementById('setup-overlay').style.display='none';
-  iniciarFirebase(cfg);
-})();
+iniciarFirebase(DEFAULT_FIREBASE_CONFIG);
 
 // ══ DIRECTORES (lista pequeña, cargable desde la propia app) ══
 function poblarDirectores(){
@@ -846,34 +983,190 @@ window.guardarDirectoresRegionalesNuevos=async()=>{
   showToast(`${nombres.length} Director(es) Regional(es) añadido(s)`);
 };
 
-// ══ CONTRASEÑA DE ADMINISTRACIÓN (solo filtro de cliente, no seguridad real) ══
-const ADMIN_PASSWORD = 'retail';
-let adminAutenticado = false;
-let _accionPendienteAdmin = null;
-window.pedirPasswordAdmin = function(accion){
-  if(adminAutenticado){ accion(); return; }
-  _accionPendienteAdmin = accion;
-  document.getElementById('admin-pass-input').value='';
-  document.getElementById('admin-pass-err').style.display='none';
-  document.getElementById('modal-admin-pass').classList.add('show');
-};
-window.cerrarModalAdminPass = function(){
-  document.getElementById('modal-admin-pass').classList.remove('show');
-  _accionPendienteAdmin = null;
-};
-window.verificarAdminPass = function(){
-  const pass = document.getElementById('admin-pass-input').value;
-  if(pass === ADMIN_PASSWORD){
-    adminAutenticado = true;
-    document.getElementById('modal-admin-pass').classList.remove('show');
-    const accion = _accionPendienteAdmin;
-    _accionPendienteAdmin = null;
-    if(accion) accion();
-  } else {
-    document.getElementById('admin-pass-err').style.display='block';
+// ══ RESUMEN PRECALCULADO (resumenVisitas/{id}) ══
+// El listado del Resumen lee solo esta ficha corta (≈300 bytes) en vez de cada visita completa,
+// para que no se vuelva lento con el histórico. Se recalcula unos segundos después de cada guardado.
+// contarEjesMejora() DEBE contar lo mismo que pinta en rojo la ficha de _resumen.html
+// (fichaCliente/fichaSecciones/fichaGestion): si cambia una, cambiar la otra.
+const NOTA_MALA = v => v!=='' && v!=null && Number(v)<=6;
+const VAL_MALA = v => /malo/i.test(v||'');
+function contarEjesMejora(v){
+  const n={cliente:0, secciones:0, gestion:0};
+  const c=v.cliente;
+  if(c){
+    Object.values(c.customerJourney||{}).forEach(d=>{ if(d && d.ejeMejora) n.cliente++; });
+    Object.values(c.tiempoCompra||{}).forEach(d=>{
+      const p=(d||{}).nps; if(!p) return;
+      if(p.tipoCliente==='Compró'){
+        if(NOTA_MALA(p.notaRecomendacion)) n.cliente++;
+        Object.values(p.valoraciones||{}).forEach(x=>{ if(VAL_MALA(x)) n.cliente++; });
+      } else if(p.tipoCliente==='No compró'){
+        n.cliente++;
+        if(!p.encontroAyuda) n.cliente++;
+      }
+    });
+    const cap=c.captacion||{};
+    ['cheques','creceSemana1','creceSemana2','creceSemana3'].forEach(k=>{ if(cap[k] && cap[k].cumple===false) n.cliente++; });
+    const t=c.transporte;
+    if(t){
+      Object.values(t.valoraciones||{}).forEach(x=>{ if(VAL_MALA(x)) n.cliente++; });
+      if(!t.entregaSinIncidencias) n.cliente++;
+      if(NOTA_MALA(t.npsTransporte)) n.cliente++;
+    }
   }
+  const s=v.secciones;
+  if(s){
+    Object.values(s.familias||{}).forEach(d=>{
+      if(Math.min(...['lleno','sensacionLleno','balizado','limpieza','facing','roturas','fueraDeSitio'].map(a=>Number((d||{})[a])||9))<=2) n.secciones++;
+    });
+    Object.values(s.implantacion||{}).forEach(d=>{ if(d && d.cumple===false) n.secciones++; });
+  }
+  const g=v.gestion;
+  if(g){
+    const no=d=>d && d.cumple===false;
+    if(no((g.productividad||{}).productividad)) n.gestion++;
+    const h=g.horas||{};
+    if(h.excesos && h.excesos.cumple) n.gestion++;
+    if(h.defecto && h.defecto.cumple) n.gestion++;
+    if(g.indiceTienda && /peor/i.test(g.indiceTienda.valor||'')) n.gestion++;
+    if(no((g.recursos||{}).recursosAfluencia)) n.gestion++;
+    ['horasPunta','horasValle'].forEach(f=>['cajas','comercio','drive','transporte','logistica'].forEach(d=>{ const b=(g[f]||{})[d]; if(b && !b.cumple) n.gestion++; }));
+    ['seguridad','ventas','precios','demarcaStock'].forEach(nodo=>Object.entries(g[nodo]||{}).forEach(([k,d])=>{ if(no(d)) n.gestion++; }));
+    Object.values(g.workflows||{}).forEach(d=>{ if(d && d.cumple===true) n.gestion++; });
+  }
+  return n;
+}
+function fichaIndice(v){
+  const c=v.cabecera||{};
+  return {fecha:c.fecha||'', tienda:c.tienda||'', director:c.director||'', directorTienda:c.directorTienda||'',
+    tipoVisita:c.tipoVisita||'', estado:c.estado||'pendiente', origen:c.origen||'',
+    alertas:contarEjesMejora(v), actualizado:new Date().toISOString()};
+}
+async function actualizarIndiceVisita(id){
+  try{
+    const v=(await _get(ref(`visitas/${id}`))).val();
+    if(v && v.cabecera && v.cabecera.tienda) await _set(ref(`resumenVisitas/${id}`), fichaIndice(v));
+  }catch(e){ console.error('[Protocolo Visita] resumen precalculado', e); }
+}
+let _tIndice=null;
+function programarIndice(){
+  const id=visitaActualId; if(!id) return;
+  clearTimeout(_tIndice);
+  _tIndice=setTimeout(()=>actualizarIndiceVisita(id), 2500);
+}
+// Administración: rehace el resumen precalculado de todas las visitas (primera vez o reparación).
+window.recalcularResumen = async function(){
+  if(!esAdmin()) return;
+  showToast('Recalculando el resumen…', 4000);
+  try{
+    const todas=(await _get(ref('visitas'))).val()||{};
+    let n=0;
+    for(const [id,v] of Object.entries(todas)){ if(v && v.cabecera && v.cabecera.tienda){ await _set(ref(`resumenVisitas/${id}`), fichaIndice(v)); n++; } }
+    showToast(`Resumen recalculado: ${n} visita(s)`, 4000);
+  }catch(e){ showToast('⚠ No se pudo recalcular: '+e.message, 5000); }
 };
 
+// ══ GESTIÓN DE USUARIOS (solo administración: Rossy y Li Lin, o rol admin) ══
+let usuariosCache={}, accesosCache={}, escuchandoUsuarios=false;
+const ROLES={regional:'Director Regional', tienda:'Director de Tienda', consulta:'Consulta', admin:'Administración'};
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+window.abrirModalUsuarios = function(){
+  if(!esAdmin()) return;
+  if(!escuchandoUsuarios){
+    escuchandoUsuarios=true;
+    _onValue(ref('usuarios'), s=>{ usuariosCache=s.val()||{}; renderUsuarios(); });
+    _onValue(ref('accesos'), s=>{ accesosCache=s.val()||{}; renderUsuarios(); });
+  }
+  document.getElementById('modal-usuarios').classList.add('show');
+};
+window.cerrarModalUsuarios = ()=>document.getElementById('modal-usuarios').classList.remove('show');
+function fechaHora(iso){ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('es-ES')+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}); }
+function renderUsuarios(){
+  const filas=Object.entries(usuariosCache).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
+  let entran=0;
+  document.getElementById('usu-lista').innerHTML = filas.map(([k,u])=>{
+    const acc=accesosCache[k];
+    if(acc && u.activo) entran++;
+    const estado = !u.activo ? '<span class="chip-u off">Desactivado</span>'
+      : acc ? `<span class="chip-u ok">✓ Entra</span><br><span style="color:#888">${fechaHora(acc.ultimo)}${Object.keys(acc.dispositivos||{}).length>3?' · ⚠ '+Object.keys(acc.dispositivos).length+' dispositivos':''}</span>`
+      : `<span class="chip-u pend">⏳ No ha entrado</span>${u.correoEnviado?'<br><span style="color:#888">correo '+fechaHora(u.correoEnviado)+'</span>':''}`;
+    const tiendas = Object.keys(u.tiendas||{}).filter(t=>u.tiendas[t]).join(', ');
+    return `<tr><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td><span class="chip-u">${esc(ROLES[u.rol]||u.rol)}</span></td>
+      <td style="max-width:180px">${esc(tiendas)||'—'}</td><td>${estado}</td>
+      <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="enviarCorreoUsuario('${k}')">✉️ Correo</button>
+        <button class="btn btn-ghost btn-sm" onclick="activarUsuario('${k}', ${!u.activo})">${u.activo?'Desactivar':'Reactivar'}</button></td></tr>`;
+  }).join('') || '<tr><td colspan="6"><em>Todavía no hay usuarios</em></td></tr>';
+  document.getElementById('usu-resumen').textContent = `${filas.filter(f=>f[1].activo).length} activos · ${entran} ya han entrado`;
+}
+async function enviarCorreo(k){
+  const u=usuariosCache[k]; if(!u) return;
+  await fbauthMod.sendPasswordResetEmail(authInst, u.email);
+  await _set(ref(`usuarios/${k}/correoEnviado`), new Date().toISOString());
+}
+window.enviarCorreoUsuario = async function(k){
+  try{ await enviarCorreo(k); showToast('Correo enviado a '+usuariosCache[k].email); }
+  catch(e){ showToast('⚠ No se pudo enviar: '+e.message, 4000); }
+};
+window.enviarCorreoPendientes = async function(){
+  const pendientes=Object.keys(usuariosCache).filter(k=>usuariosCache[k].activo && !accesosCache[k] && !/\.local$/.test(usuariosCache[k].email||''));
+  if(!pendientes.length){ showToast('Todos los usuarios activos han entrado ya'); return; }
+  if(!confirm(`Se enviará el correo para crear la contraseña a ${pendientes.length} persona(s) que aún no han entrado. ¿Continuar?`)) return;
+  let ok=0;
+  for(const k of pendientes){ try{ await enviarCorreo(k); ok++; }catch(e){ console.error(k, e); } }
+  showToast(`Correo enviado a ${ok} de ${pendientes.length}`, 4000);
+};
+window.activarUsuario = async function(k, activo){
+  if(!activo && !confirm(`¿Desactivar a ${usuariosCache[k].nombre}? Dejará de poder entrar en todos sus dispositivos. Sus visitas no se tocan.`)) return;
+  await _set(ref(`usuarios/${k}/activo`), activo);
+};
+function contrasenaAleatoria(){
+  const a=new Uint8Array(24); crypto.getRandomValues(a);
+  return Array.from(a, b=>'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'[b%57]).join('')+'!7a';
+}
+// Crea la cuenta de acceso sin cerrar la sesión de quien administra (instancia aparte de Firebase).
+async function crearCuentaAcceso(email){
+  if(!window._appAltas) window._appAltas=_initializeApp(DEFAULT_FIREBASE_CONFIG, 'altas');
+  const a2=fbauthMod.getAuth(window._appAltas);
+  try{ await fbauthMod.createUserWithEmailAndPassword(a2, email, contrasenaAleatoria()); await fbauthMod.signOut(a2); return 'nueva'; }
+  catch(e){ if(e.code==='auth/email-already-in-use') return 'ya existía'; throw e; }
+}
+window.anadirUsuarios = async function(){
+  const log=document.getElementById('usu-log'); log.textContent='';
+  const enviar=document.getElementById('usu-enviar').checked;
+  const lineas=document.getElementById('usu-nuevos').value.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
+  const rolesTexto={regional:'regional', 'director regional':'regional', tienda:'tienda', 'director de tienda':'tienda', consulta:'consulta', ver:'consulta', admin:'admin', 'administración':'admin', administracion:'admin'};
+  const nombresTienda=new Set(Object.values(directoresCache).map(d=>d.nombre));
+  const nombresRegional=new Set(Object.values(directoresRegionalesCache).map(d=>d.nombre));
+  let hechos=0;
+  for(const l of lineas){
+    const [nombre, emailRaw, rolRaw, tiendasRaw, enLista] = l.split('|').map(x=>(x||'').trim());
+    const email=(emailRaw||'').toLowerCase(), rol=rolesTexto[(rolRaw||'').toLowerCase()];
+    const tiendas=(tiendasRaw||'').split(',').map(t=>t.trim().toUpperCase()).filter(Boolean);
+    const err=[];
+    if(!nombre) err.push('falta el nombre');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) err.push('correo no válido');
+    if(!rol) err.push('rol desconocido');
+    if((rol==='regional'||rol==='tienda') && !tiendas.length) err.push('faltan las tiendas');
+    const malas=tiendas.filter(t=>!TIENDAS.includes(t)); if(malas.length) err.push('tienda desconocida: '+malas.join(', '));
+    if(rol==='tienda' && !nombresTienda.has(enLista)) err.push(`«${enLista}» no está en la lista de Directores de Tienda`);
+    if(rol==='regional' && !nombresRegional.has(enLista)) err.push(`«${enLista}» no está en la lista de Directores Regionales`);
+    if(err.length){ log.textContent+=`✗ ${nombre||l}: ${err.join('; ')}\n`; continue; }
+    try{
+      const cuenta=await crearCuentaAcceso(email);
+      const k=claveDeEmail(email);
+      const u={nombre, email, rol, activo:true, creado:new Date().toISOString(), creadoPor:authInst.currentUser.email};
+      if(rol==='regional'||rol==='tienda') u.tiendas=Object.fromEntries(tiendas.map(t=>[t,true]));
+      if(rol==='regional') u.directorRegional=enLista;
+      if(rol==='tienda') u.directorTienda=enLista;
+      await _set(ref(`usuarios/${k}`), u);
+      if(enviar && !/\.local$/.test(email)){ await enviarCorreo(k); }
+      log.textContent+=`✓ ${nombre} (${ROLES[rol]}) · cuenta ${cuenta}${enviar?' · correo enviado':''}\n`;
+      hechos++;
+    }catch(e){ log.textContent+=`✗ ${nombre}: ${e.message}\n`; }
+  }
+  log.textContent+=`\n${hechos} de ${lineas.length} usuario(s) dados de alta.`;
+  if(hechos===lineas.length) document.getElementById('usu-nuevos').value='';
+};
 // ══ PANTALLA 1 → 2 ══
 window.iniciarVisita=async()=>{
   const director=document.getElementById('c-director').value;
@@ -900,9 +1193,11 @@ window.iniciarVisita=async()=>{
     visitaActualId=nuevaRef.key;
     await _set(nuevaRef, {
       cabecera:{director,fecha,tienda,tipoVisita,directorTienda,creado:new Date().toISOString(),
-                estado:'pendiente', pendienteTienda:tienda}
+                estado:'pendiente', pendienteTienda:tienda,
+                registradoPor:{email:(authInst.currentUser.email||'').toLowerCase(), nombre:perfil.nombre||''}}
     });
     showToast('Visita creada — ya está guardada');
+    actualizarIndiceVisita(visitaActualId);
   }catch(e){
     errEl.textContent='No se pudo guardar en Firebase: '+e.message;
     errEl.style.display='block';
@@ -938,6 +1233,7 @@ renderCustomerJourney();
 
 async function guardarPunto(key, data){
   await _set(ref(`visitas/${visitaActualId}/cliente/customerJourney/${key}`), data);
+  programarIndice();
   const badge=document.getElementById(`cj-${key}-badge`);
   badge.classList.add('show');
   setTimeout(()=>badge.classList.remove('show'), 1500);
@@ -978,12 +1274,12 @@ function guardarUbicacionActual(pantallaId){
   try{
     if(pantallaId==='pantalla-fin-gestion'){ marcarVisitaCompletada(); borrarVisitaPendienteGuardada(); return; } // protocolo completo, nada que retomar
     if(visitaActualId && pantallaId!=='pantalla-cabecera'){
-      localStorage.setItem('bm_visita_en_curso', JSON.stringify({visitaId: visitaActualId, pantalla: pantallaId}));
+      localStorage.setItem(claveVisitaEnCurso(), JSON.stringify({visitaId: visitaActualId, pantalla: pantallaId}));
     }
   }catch(e){}
 }
 function borrarVisitaPendienteGuardada(){
-  try{ localStorage.removeItem('bm_visita_en_curso'); }catch(e){}
+  try{ localStorage.removeItem(claveVisitaEnCurso()); }catch(e){}
 }
 window.irAtras = function(){
   const prev = historialPantallas.pop();
@@ -997,6 +1293,7 @@ window.irAtras = function(){
 async function guardarCampo(pathSuffix, data, badgeId){
   try{
     await _set(ref(`visitas/${visitaActualId}/${pathSuffix}`), data);
+    programarIndice();
     if(badgeId){
       const b=document.getElementById(badgeId);
       if(b){ b.textContent='✓ Guardado'; b.style.color=''; b.classList.add('show'); setTimeout(()=>b.classList.remove('show'),1500); }
