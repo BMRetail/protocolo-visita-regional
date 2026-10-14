@@ -161,7 +161,7 @@
     <div class="conn">
       <span class="conn-dot" id="cdot"></span><span id="ctxt">Conectando…</span>
       <button class="btn-refresh" onclick="actualizarAhora()">🔄 Actualizar ahora</button>
-      <div class="usuario hidden" id="usuario-info"><span id="usuario-nombre"></span><br><button onclick="cerrarSesion()">Cerrar sesión</button></div>
+      <div class="usuario hidden" id="usuario-info"><span id="usuario-nombre"></span><br><span id="enlace-inicio"><button onclick="location.href='PROTOCOLO_VISITA_REGIONAL_registro.html'">🏠 Inicio</button> · </span><button onclick="cerrarSesion()">Cerrar sesión</button></div>
     </div>
   </div>
 </header>
@@ -311,6 +311,8 @@ async function iniciarFirebase(cfg){
     document.getElementById('login-overlay').classList.remove('show');
     document.getElementById('usuario-nombre').textContent = perfil.nombre || email;
     document.getElementById('usuario-info').classList.remove('hidden');
+    // El menú de inicio está en la app de Registro; los de solo consulta no lo usan.
+    document.getElementById('enlace-inicio').classList.toggle('hidden', perfil.rol==='consulta');
     escucharVisitas();
   });
 }

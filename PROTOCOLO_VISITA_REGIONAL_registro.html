@@ -90,6 +90,12 @@
   .tabla-usu th{text-align:left;font-size:.68rem;color:#777;padding:6px;border-bottom:2px solid var(--gris-borde)}
   .tabla-usu td{padding:6px;border-bottom:1px solid var(--gris-borde);vertical-align:top}
   .chip-u{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--bm-blue-light);color:var(--bm-blue)}
+  .menu-op{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--blanco);color:var(--ink);
+    border:1.5px solid var(--gris-borde);border-radius:var(--radius);padding:18px;margin-bottom:12px;cursor:pointer;box-shadow:var(--shadow);font-family:inherit}
+  .menu-op:hover{border-color:var(--bm-blue)}
+  .menu-op .ico{font-size:1.8rem;line-height:1}
+  .menu-op b{display:block;font-size:1rem;color:var(--bm-blue)}
+  .menu-op span{font-size:.78rem;color:#777}
   .chip-u.ok{background:#e3f4e8;color:#1e7a3c} .chip-u.pend{background:#fdf0d5;color:#a86a00} .chip-u.off{background:#eee;color:#777}
 </style>
 </head>
@@ -118,19 +124,40 @@
     <div class="sub">Registro de visita — Cliente, Secciones y Gestión</div>
   </div>
   <div class="conn"><span class="conn-dot" id="cdot"></span><span id="ctxt">Conectando…</span></div>
-  <div class="usuario hidden" id="usuario-info"><span id="usuario-nombre"></span><br><button onclick="cerrarSesion()">Cerrar sesión</button></div>
+  <div class="usuario hidden" id="usuario-info"><span id="usuario-nombre"></span><br><button onclick="irInicio()">🏠 Inicio</button> · <button onclick="cerrarSesion()">Cerrar sesión</button></div>
 </header>
 
 <main>
 
-  <!-- ══ PANTALLA 1: CABECERA ══ -->
-  <section id="pantalla-cabecera">
+  <!-- ══ PANTALLA DE INICIO: una sola entrada para registrar y para el seguimiento ══ -->
+  <section id="pantalla-inicio">
+    <div class="card">
+      <h2 style="margin-bottom:4px" id="inicio-saludo">Hola</h2>
+      <p style="font-size:.82rem;color:#777;margin:0">¿Qué quieres hacer?</p>
+    </div>
     <div class="card hidden" id="banner-visita-pendiente" style="background:var(--bm-blue-light);border:1.5px solid var(--bm-blue)">
       <h3 style="margin:0 0 6px;font-size:.9rem;color:var(--bm-blue)">📌 Tienes una visita sin terminar</h3>
       <p id="banner-visita-info" style="font-size:.85rem;margin:0 0 12px"></p>
       <button class="btn" onclick="continuarVisitaPendiente()">Continuar esa visita ▸</button>
       <button class="btn btn-ghost" style="margin-left:8px" onclick="descartarVisitaPendiente()">Empezar una nueva</button>
     </div>
+    <button class="menu-op" onclick="irARegistrar()"><span class="ico">📝</span><span><b>Registrar visita</b><span>Empezar una visita nueva o continuar una pendiente</span></span></button>
+    <button class="menu-op" onclick="irASeguimiento()"><span class="ico">📊</span><span><b>Seguimiento de visitas</b><span>Ver las visitas, su estado y los ejes de mejora</span></span></button>
+    <div class="card hidden" id="inicio-pendientes" style="background:var(--bm-blue-light);border:1.5px solid var(--bm-blue)"></div>
+    <!-- Administración: plegada y discreta, fuera de la vista de los directores -->
+    <details class="admin-plegable hidden" id="admin-plegable">
+      <summary>Administración</summary>
+      <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
+        <button class="link-btn" onclick="abrirModalUsuarios()">👥 Gestionar usuarios</button>
+        <button class="link-btn" onclick="recalcularResumen()">🔄 Recalcular resumen</button>
+        <button class="link-btn" onclick="abrirModalDirectoresRegionales()">⚙️ Gestionar Directores Regionales</button>
+        <button class="link-btn" onclick="abrirModalDirectores()">⚙️ Gestionar Directores de Tienda</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- ══ PANTALLA 1: CABECERA ══ -->
+  <section id="pantalla-cabecera" class="hidden">
     <div class="card hidden" id="aviso-consulta">
       <h2>Tu usuario es de consulta</h2>
       <p style="font-size:.88rem;margin:0 0 12px">Puedes ver todas las visitas en el Seguimiento de visitas, pero no registrar visitas.</p>
@@ -173,16 +200,6 @@
       <div class="setup-err" id="cabecera-err"></div>
     </div>
 
-    <!-- Administración: plegada y discreta, fuera de la vista de los directores -->
-    <details class="admin-plegable hidden" id="admin-plegable">
-      <summary>Administración</summary>
-      <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
-        <button class="link-btn" onclick="abrirModalUsuarios()">👥 Gestionar usuarios</button>
-        <button class="link-btn" onclick="recalcularResumen()">🔄 Recalcular resumen</button>
-        <button class="link-btn" onclick="abrirModalDirectoresRegionales()">⚙️ Gestionar Directores Regionales</button>
-        <button class="link-btn" onclick="abrirModalDirectores()">⚙️ Gestionar Directores de Tienda</button>
-      </div>
-    </details>
   </section>
 
   <!-- ══ PANTALLA 2: CUSTOMER JOURNEY (2.1 Bloque Cliente) ══ -->
@@ -593,11 +610,47 @@ async function iniciarFirebase(cfg){
     alEntrar(user);
   });
 }
+// ══ INICIO (menú) ══
+window.irARegistrar = function(){ historialPantallas=['pantalla-inicio']; mostrarPantalla('pantalla-cabecera'); };
+window.irASeguimiento = function(){ location.href='PROTOCOLO_VISITA_REGIONAL_resumen.html'; };
+function mostrarPantalla(id){
+  document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+window.irInicio = function(){
+  historialPantallas=[];
+  mostrarPantalla('pantalla-inicio');
+  cargarPendientesInicio();
+};
+// Visitas sin terminar de las tiendas del usuario (director de tienda y regional), con «Continuar».
+async function cargarPendientesInicio(){
+  const caja=document.getElementById('inicio-pendientes');
+  const propias=tiendasDelUsuario();
+  if(!propias || !db){ caja.classList.add('hidden'); return; }
+  const lista=[];
+  for(const t of propias){
+    try{
+      const snap=await _get(_query(ref('visitas'), _orderByChild('cabecera/pendienteTienda'), _equalTo(t)));
+      snap.forEach(ch=>{ const c=(ch.val()||{}).cabecera||{}; if(c.estado!=='completada') lista.push({id:ch.key, ...c}); });
+    }catch(e){ console.error('[Protocolo Visita] pendientes inicio '+t, e); }
+  }
+  if(!lista.length){ caja.classList.add('hidden'); return; }
+  lista.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  caja.innerHTML = `<h3 style="margin:0 0 6px;font-size:.9rem;color:var(--bm-blue)">📌 ${lista.length===1?'Hay una visita pendiente':'Hay '+lista.length+' visitas pendientes'} de completar</h3>`
+    + lista.map(v=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0;border-top:1px solid rgba(0,0,0,.08)">
+        <span style="font-size:.85rem"><b>${v.tienda}</b> · ${fechaES(v.fecha)} · ${v.director||'?'}${v.origen==='Forms'?' <span style="color:#888;font-size:.75rem">(empezada en Forms)</span>':''}</span>
+        <button class="btn btn-sm" onclick="continuarVisitaTienda('${v.id}')">Continuar ▸</button></div>`).join('');
+  caja.classList.remove('hidden');
+}
+
 // Una vez identificado el usuario: conexión, listas y visitas pendientes.
 function arrancarApp(){
+  if(perfil.rol==='consulta'){ location.replace('PROTOCOLO_VISITA_REGIONAL_resumen.html'); return; }
   aplicarPerfilCabecera();
   if(appArrancada) return;
   appArrancada=true;
+  document.getElementById('inicio-saludo').textContent = 'Hola, ' + String(perfil.nombre||'').split(' ')[0];
   const connTimeout=setTimeout(()=>{
     document.getElementById('ctxt').textContent='Sin respuesta — revisa la conexión';
   },8000);
@@ -620,6 +673,7 @@ function arrancarApp(){
     aplicarPerfilCabecera();
   });
   if(perfil.rol!=='consulta') comprobarVisitaPendiente();
+  cargarPendientesInicio();
 }
 // Adapta la cabecera al usuario: regional = él mismo y sus tiendas; director de tienda = su tienda,
 // él mismo y el regional de esa tienda; consulta = aviso con enlace al Resumen; admin = todo libre.
