@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BigMat – Protocolo de Visita Regional (Resumen)</title>
+<title>BigMat – Protocolo de Visita Regional (Seguimiento de visitas)</title>
 <style>
   :root{
     --bg:#EDEEEC; --ink:#191C1E; --bm-blue:#024289; --bm-blue-light:#e8f0fa;
@@ -138,7 +138,7 @@
 <!-- ══ ACCESO: correo de empresa + contraseña (se pide una vez por dispositivo) ══ -->
 <div id="login-overlay">
   <div class="login-box">
-    <div class="login-head"><b>📊 Protocolo de Visita Regional</b><span>Resumen ejecutivo · acceso con tu correo de empresa</span></div>
+    <div class="login-head"><b>📊 Protocolo de Visita Regional</b><span>Seguimiento de visitas · acceso con tu correo de empresa</span></div>
     <div class="login-body">
       <label style="margin-top:0">Correo de empresa</label>
       <input type="text" id="login-email" autocomplete="username" inputmode="email" placeholder="nombre.apellido@bigmat.biz">
@@ -156,7 +156,7 @@
   <div class="top">
     <div>
       <h1>📊 Protocolo de Visita Regional</h1>
-      <div class="sub">Resumen ejecutivo — datos en vivo</div>
+      <div class="sub">Seguimiento de visitas — datos en vivo</div>
     </div>
     <div class="conn">
       <span class="conn-dot" id="cdot"></span><span id="ctxt">Conectando…</span>
@@ -214,7 +214,7 @@
       <div id="ficha-cliente"></div>
       <div id="ficha-secciones" class="hidden"></div>
       <div id="ficha-gestion" class="hidden"></div>
-      <details class="ficha-json"><summary>Datos técnicos</summary><pre id="detalle-contenido"></pre></details>
+      <details class="ficha-json hidden"><summary>Datos técnicos</summary><pre id="detalle-contenido"></pre></details>
     </div>
   </div>
 </div>
@@ -304,7 +304,7 @@ async function iniciarFirebase(cfg){
     try{ p=(await _get(_ref(db,'usuarios/'+claveDeEmail(email)))).val(); }catch(e){ console.error('[Protocolo Visita] perfil', e); }
     if(ADMINS.includes(email)) p=Object.assign({nombre:email}, p||{}, {rol:'admin', activo:true});
     if(!p || p.activo!==true){
-      mensajeLogin='Tu usuario no tiene acceso al Resumen. Contacta con Rossy Cuenca (rossy.cuenca@bigmat.biz).';
+      mensajeLogin='Tu usuario no tiene acceso al Seguimiento de visitas. Contacta con Rossy Cuenca (rossy.cuenca@bigmat.biz).';
       await fbauthMod.signOut(authInst); return;
     }
     perfil=p;
@@ -620,6 +620,8 @@ window.verDetalle = async function(id){
   });
   document.getElementById('detalle-contenido').textContent = JSON.stringify(v, null, 2);
   document.querySelector('.ficha-json').open = false;
+  // «Datos técnicos» (la visita tal como está guardada): solo para administración
+  document.querySelector('.ficha-json').classList.toggle('hidden', !(perfil && perfil.rol==='admin'));
   verPestana('cliente');
   document.getElementById('modal-detalle').classList.add('show');
 };
