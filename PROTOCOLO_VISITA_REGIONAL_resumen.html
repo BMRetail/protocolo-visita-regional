@@ -34,7 +34,20 @@
     font-size:.85rem;background:var(--blanco);color:var(--ink);min-width:160px}
 
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-  .kpi{background:var(--blanco);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .kpi{background:var(--blanco);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;position:relative}
+  .kpi .info{position:absolute;top:8px;right:10px;font-size:.8rem;color:#999;cursor:help}
+  .badge-completa{background:#e3f4e8;color:#1e7a3c}
+  .badge-incompleta{background:#fdf0d5;color:var(--warn)}
+  .resumen-visita{background:var(--blanco);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:.84rem;line-height:1.6}
+  .resumen-visita b{color:var(--bm-blue)}
+  .hecha-ok{display:inline-block;margin-top:4px;font-size:.75rem;font-weight:700;color:#1e7a3c;background:#e3f4e8;border-radius:10px;padding:1px 8px}
+  .hecha-btn{margin-top:4px;background:var(--blanco);border:1.5px solid #1e7a3c;color:#1e7a3c;border-radius:10px;padding:1px 9px;font-size:.72rem;font-weight:700;cursor:pointer}
+  .hecha-vencida{display:inline-block;margin:4px 6px 0 0;font-size:.72rem;font-weight:700;color:var(--bm-red)}
+  .link-mini{background:none;border:none;color:#888;text-decoration:underline;font-size:.72rem;cursor:pointer;padding:0 4px}
+  .badge-anulada{background:#eee;color:#777}
+  .admin-acciones{margin-top:8px;font-size:.78rem;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .admin-acciones select{font-size:.78rem;padding:3px 6px;border:1px solid var(--gris-borde);border-radius:6px;background:var(--blanco);color:var(--ink);max-width:260px}
+  .btn-reabrir{background:none;border:1.5px solid var(--warn);color:var(--warn);border-radius:6px;padding:3px 10px;font-size:.75rem;font-weight:700;cursor:pointer;margin-left:8px}
   .kpi .num{font-size:1.7rem;font-weight:800;color:var(--bm-blue);font-variant-numeric:tabular-nums}
   .kpi .lbl{font-size:.75rem;color:#777;margin-top:2px}
   .kpi.alerta .num{color:var(--bm-red)}
@@ -47,7 +60,7 @@
     text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0;background:var(--blanco)}
   td{padding:8px 10px;border-bottom:1px solid var(--gris-borde)}
   tr:hover td{background:var(--bm-blue-light)}
-  .scroll-y{max-height:480px;overflow:auto}
+  .scroll-y{max-height:480px;overflow:auto;-webkit-overflow-scrolling:touch}
   .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:700}
   .badge-semanal{background:#e8f0fa;color:var(--bm-blue)}
   .badge-mensual{background:#fdf0d5;color:var(--warn)}
@@ -170,13 +183,16 @@
   <div class="filtros">
     <select id="f-director" onchange="aplicarFiltros()"><option value="">Todos los directores y regionales</option></select>
     <select id="f-tienda" onchange="aplicarFiltros()"><option value="">Todas las tiendas</option></select>
+    <label id="ver-anuladas-wrap" class="hidden" style="font-size:.8rem;display:flex;align-items:center;gap:6px;color:#777"><input type="checkbox" id="ver-anuladas" onchange="aplicarFiltros()" style="width:auto"> Ver anuladas</label>
   </div>
 
   <div class="kpis">
-    <div class="kpi"><div class="num" id="kpi-total">0</div><div class="lbl">Visitas registradas</div></div>
-    <div class="kpi"><div class="num" id="kpi-tiendas">0</div><div class="lbl">Tiendas visitadas</div></div>
-    <div class="kpi"><div class="num" id="kpi-sinvisitar">0</div><div class="lbl">Tiendas sin visitar</div></div>
-    <div class="kpi alerta"><div class="num" id="kpi-alertas">0</div><div class="lbl">Ejes de mejora sin resolver</div></div>
+    <div class="kpi"><span class="info" title="Número de visitas (pendientes y completadas) con los filtros elegidos.">ⓘ</span><div class="num" id="kpi-total">0</div><div class="lbl">Visitas registradas</div></div>
+    <div class="kpi"><span class="info" title="Tiendas con al menos una visita, con los filtros elegidos.">ⓘ</span><div class="num" id="kpi-tiendas">0</div><div class="lbl">Tiendas visitadas</div></div>
+    <div class="kpi"><span class="info" title="Tiendas de la red (21, o las tuyas si eres Director de Tienda) sin ninguna visita.">ⓘ</span><div class="num" id="kpi-sinvisitar">0</div><div class="lbl">Tiendas sin visitar</div></div>
+    <div class="kpi alerta"><span class="info" title="Suma de las respuestas en rojo de las visitas (las mismas que marca la ficha).">ⓘ</span><div class="num" id="kpi-alertas">0</div><div class="lbl">Ejes de mejora sin resolver</div></div>
+    <div class="kpi alerta"><span class="info" title="Ejes de mejora con plan de acción cuya fecha «¿Cuándo?» ya ha pasado y que nadie ha marcado como «✓ Hecha» en la ficha.">ⓘ</span><div class="num" id="kpi-vencidas">0</div><div class="lbl">Acciones con fecha vencida</div></div>
+    <div class="kpi alerta"><span class="info" title="Ejes de mejora sin plan de acción o sin fecha «¿Cuándo?».">ⓘ</span><div class="num" id="kpi-sinplan">0</div><div class="lbl">Ejes sin plan o sin fecha</div></div>
   </div>
 
   <div class="card">
@@ -184,7 +200,7 @@
     <div class="scroll-y">
       <table>
         <thead>
-          <tr><th>Fecha</th><th>Tienda</th><th>Director Regional</th><th>Director de Tienda</th><th>Tipo</th><th>Estado</th><th>Alertas</th><th></th></tr>
+          <tr><th>Fecha</th><th>Tienda</th><th>Director Regional</th><th>Director de Tienda</th><th>Tipo</th><th>Estado</th><th>Finalizada</th><th>Completitud</th><th>Alertas</th><th></th></tr>
         </thead>
         <tbody id="tabla-visitas"></tbody>
       </table>
@@ -211,6 +227,7 @@
       </div>
     </div>
     <div class="ficha-body">
+      <div id="ficha-resumen"></div>
       <div id="ficha-cliente"></div>
       <div id="ficha-secciones" class="hidden"></div>
       <div id="ficha-gestion" class="hidden"></div>
@@ -313,6 +330,7 @@ async function iniciarFirebase(cfg){
     document.getElementById('usuario-info').classList.remove('hidden');
     // El menú de inicio está en la app de Registro; los de solo consulta no lo usan.
     document.getElementById('enlace-inicio').classList.toggle('hidden', perfil.rol==='consulta');
+    document.getElementById('ver-anuladas-wrap').classList.toggle('hidden', perfil.rol!=='admin');
     escucharVisitas();
   });
 }
@@ -356,6 +374,18 @@ window.actualizarAhora = function(){
 };
 
 // Ejes de mejora de una visita: los mismos que marca en rojo la ficha (ver fichaCliente/fichaSecciones/fichaGestion).
+function badgeEstado(e){
+  return e==='completada' ? '<span class="badge badge-completada">Completada</span>'
+       : e==='anulada' ? '<span class="badge badge-anulada">Anulada</span>'
+       : '<span class="badge badge-pendiente">Pendiente</span>';
+}
+function chipCompletitud(r){
+  const k=(r||{}).completitud;
+  if(!k || !k.total) return '<span title="Se calcula la próxima vez que alguien abra o guarde la visita">—</span>';
+  const ok=k.completas===k.total;
+  const falt=[].concat(k.sinContestar||[]);
+  return `<span class="badge ${ok?'badge-completa':'badge-incompleta'}" title="${ok?'Todas las pantallas contestadas o «No aplica»':'Sin contestar: '+esc(falt.join(', '))}">${k.completas}/${k.total}</span>`;
+}
 function contarAlertas(r){ const a=(r||{}).alertas||{}; return (a.cliente||0)+(a.secciones||0)+(a.gestion||0); }
 
 function poblarFiltros(){
@@ -376,20 +406,24 @@ window.aplicarFiltros = function(){
   const fTienda = document.getElementById('f-tienda').value;
   const fDirector = document.getElementById('f-director').value;
 
+  const verAnuladas = document.getElementById('ver-anuladas').checked;
   const entradas = Object.entries(visitasCache).filter(([id, v])=>{
     const c = v||{};
+    if(c.estado==='anulada' && !verAnuladas) return false;
     if(fTienda && c.tienda!==fTienda) return false;
     if(fDirector && c.director!==fDirector) return false;
     return true;
   });
 
   const tiendas = new Set(), directores = new Set();
-  let totalAlertas = 0;
+  let totalAlertas = 0, totalVencidas = 0, totalSinPlan = 0;
   entradas.forEach(([id,v])=>{
     const c=v||{};
     if(c.tienda) tiendas.add(c.tienda);
     if(c.director) directores.add(c.director);
     totalAlertas += contarAlertas(v||{});
+    totalVencidas += (c.acciones||{}).vencidas||0;
+    totalSinPlan += (c.acciones||{}).sinPlanOFecha||0;
   });
 
   document.getElementById('kpi-total').textContent = entradas.length;
@@ -397,6 +431,8 @@ window.aplicarFiltros = function(){
   const universo = fTienda ? 1 : (tiendasDelUsuario() || TIENDAS).length;
   document.getElementById('kpi-sinvisitar').textContent = Math.max(0, universo - tiendas.size);
   document.getElementById('kpi-alertas').textContent = totalAlertas;
+  document.getElementById('kpi-vencidas').textContent = totalVencidas;
+  document.getElementById('kpi-sinplan').textContent = totalSinPlan;
 
   const tbody = document.getElementById('tabla-visitas');
   const ordenadas = entradas.sort((a,b)=>{
@@ -413,7 +449,9 @@ window.aplicarFiltros = function(){
       <td>${c.director||''}</td>
       <td>${c.directorTienda||''}</td>
       <td><span class="badge ${claseTipo}">${c.tipoVisita||'-'}</span></td>
-      <td>${c.estado==='completada'?'<span class="badge badge-completada">Completada</span>':'<span class="badge badge-pendiente">Pendiente</span>'}${c.origen==='Forms'?' <span style="font-size:.68rem;color:#999">(Forms)</span>':''}</td>
+      <td>${badgeEstado(c.estado)}${c.origen==='Forms'?' <span style="font-size:.68rem;color:#999">(Forms)</span>':''}</td>
+      <td>${c.estado==='completada' && c.completado ? fES(c.completado.slice(0,10)) : '—'}</td>
+      <td>${chipCompletitud(c)}</td>
       <td>${alertas>0?`<span class="badge badge-alerta">${alertas}</span>`:'—'}</td>
       <td><button class="btn-refresh" style="color:var(--bm-blue);border-color:var(--bm-blue)" onclick="verDetalle('${id}')">Ver</button></td>
     </tr>`;
@@ -462,14 +500,74 @@ function planHtml(plan, cuando){
   return `<div class="plan">${plan?esc(plan):'<span class="sin-datos">Sin plan de acción</span>'}${cuando?` <strong>· ${fES(cuando)}</strong>`:''}</div>`;
 }
 // Una fila pregunta → respuesta. estado: 'ok' | 'mal' | 'neutro'
-function fila(pregunta, respuesta, estado, plan, cuando){
+function fila(pregunta, respuesta, estado, plan, cuando, ruta){
   return `<div class="fila ${estado==='mal'?'mal':'bien'}"><div class="q"><span>${esc(pregunta)}</span>
-    <span class="chip ${estado}">${esc(respuesta)}</span></div>${planHtml(plan, cuando)}</div>`;
+    <span class="chip ${estado}">${esc(respuesta)}</span></div>${planHtml(plan, cuando)}${estado==='mal' && ruta ? hechaHtml(ruta, cuando) : ''}</div>`;
 }
-function filaSiNo(pregunta, d, siEsBueno){
+function filaSiNo(pregunta, d, siEsBueno, ruta){
   if(!d || (d.cumple!==true && d.cumple!==false)) return '';
   const bueno = siEsBueno ? d.cumple : !d.cumple;
-  return fila(pregunta, d.cumple?'Sí':'No', bueno?'ok':'mal', d.plan, d.fecha||d.cuando);
+  return fila(pregunta, d.cumple?'Sí':'No', bueno?'ok':'mal', d.plan, d.fecha||d.cuando, ruta);
+}
+// ══ «✓ HECHA»: marcar como hecha la acción de un eje de mejora ══
+// Se guarda en visitas/{id}/hechas/{ruta con | en vez de /} = {fecha, email, nombre}.
+let fichaActual = null;   // {id, v} de la ficha abierta
+function puedeEditar(tienda){
+  if(!perfil) return false;
+  if(perfil.rol==='admin') return true;
+  return (perfil.rol==='regional' || perfil.rol==='tienda') && (perfil.tiendas||{})[tienda]===true;
+}
+function hechaHtml(ruta, cuando){
+  if(!fichaActual) return '';
+  const h=((fichaActual.v.hechas)||{})[ruta.replace(/\//g,'|')];
+  const editable=puedeEditar((fichaActual.v.cabecera||{}).tienda) && (fichaActual.v.cabecera||{}).estado!=='anulada';
+  if(h) return `<div><span class="hecha-ok">✓ Hecha el ${new Date(h.fecha).toLocaleDateString('es-ES')}${h.nombre?' · '+esc(h.nombre):''}</span>`
+    + (editable ? `<button class="link-mini" onclick="marcarHecha('${ruta}', false)">deshacer</button>` : '') + '</div>';
+  const vencida = cuando && cuando < new Date().toISOString().slice(0,10);
+  return `<div>${vencida?'<span class="hecha-vencida">⏰ Fecha vencida</span>':''}`
+    + (editable ? `<button class="hecha-btn" onclick="marcarHecha('${ruta}', true)">✓ Marcar como hecha</button>` : '') + '</div>';
+}
+window.marcarHecha = async function(ruta, valor){
+  if(!fichaActual) return;
+  const {id, v}=fichaActual, clave=ruta.replace(/\//g,'|');
+  const firma = valor ? {fecha:new Date().toISOString(), email:(authInst.currentUser.email||'').toLowerCase(), nombre:perfil.nombre||''} : null;
+  try{
+    await fb.set(_ref(db, `visitas/${id}/hechas/${clave}`), firma);
+    v.hechas = Object.assign({}, v.hechas||{}); if(firma) v.hechas[clave]=firma; else delete v.hechas[clave];
+    const marca=new Date().toISOString();
+    await fb.update(_ref(db, 'resumenVisitas/'+id), {acciones: accionesMejora(v), actualizado: marca});
+    detallesCache[id]={actualizado:marca, v};
+    const tab=(document.querySelector('.tab.activa')||{}).dataset?.tab || 'cliente';
+    pintarFicha(id, v); verPestana(tab);
+  }catch(e){ alert('No se pudo guardar: '+e.message); }
+};
+// Ejes de mejora con plan/fecha. DEBE coincidir con listaAccionesMejora() de _registro.html.
+function listaAccionesMejora(v){
+  const acc=[]; const hechas=v.hechas||{};
+  const add=(ruta,plan,fecha)=>acc.push({ruta, plan:String(plan||''), fecha:String(fecha||''), hecha:!!hechas[ruta.replace(/\//g,'|')]});
+  const c=v.cliente||{}, s=v.secciones||{}, g=v.gestion||{};
+  const no=d=>d && d.cumple===false;
+  Object.entries(c.customerJourney||{}).forEach(([k,d])=>{ if(d && d.ejeMejora) add(`cliente/customerJourney/${k}`, d.que, d.cuando); });
+  const cap=c.captacion||{};
+  ['cheques','creceSemana1','creceSemana2','creceSemana3'].forEach(k=>{ if(no(cap[k])) add(`cliente/captacion/${k}`, cap[k].plan, cap[k].fecha); });
+  Object.entries(s.familias||{}).forEach(([k,d])=>{
+    if(Math.min(...['lleno','sensacionLleno','balizado','limpieza','facing','roturas','fueraDeSitio'].map(a=>Number((d||{})[a])||9))<=2) add(`secciones/familias/${k}`, d.plan, d.cuando);
+  });
+  Object.entries(s.implantacion||{}).forEach(([k,d])=>{ if(no(d)) add(`secciones/implantacion/${k}`, d.plan, d.fecha); });
+  const pr=(g.productividad||{}).productividad; if(no(pr)) add('gestion/productividad/productividad', pr.plan, pr.fecha);
+  const h=g.horas||{}; ['excesos','defecto'].forEach(k=>{ if(h[k] && h[k].cumple) add(`gestion/horas/${k}`, h[k].plan, h[k].fecha); });
+  if(g.indiceTienda && /peor/i.test(g.indiceTienda.valor||'')) add('gestion/indiceTienda', g.indiceTienda.plan, g.indiceTienda.cuando);
+  const re=(g.recursos||{}).recursosAfluencia; if(no(re)) add('gestion/recursos/recursosAfluencia', re.plan, re.fecha);
+  ['horasPunta','horasValle'].forEach(f=>['cajas','comercio','drive','transporte','logistica'].forEach(d=>{ const b=(g[f]||{})[d]; if(b && !b.cumple) add(`gestion/${f}/${d}`, b.plan, b.fecha); }));
+  ['seguridad','ventas','precios','demarcaStock'].forEach(n=>Object.entries(g[n]||{}).forEach(([k,d])=>{ if(no(d)) add(`gestion/${n}/${k}`, d.plan, d.fecha); }));
+  Object.entries(g.workflows||{}).forEach(([k,d])=>{ if(d && d.cumple===true) add(`gestion/workflows/${k}`, d.plan, d.fecha); });
+  return acc;
+}
+function accionesMejora(v){
+  const acc=listaAccionesMejora(v), hoyIso=new Date().toISOString().slice(0,10);
+  return {total:acc.length, hechas:acc.filter(a=>a.hecha).length,
+          sinPlanOFecha:acc.filter(a=>!a.hecha && (!a.plan.trim()||!a.fecha)).length,
+          vencidas:acc.filter(a=>!a.hecha && a.fecha && a.fecha<hoyIso).length};
 }
 function filaTexto(pregunta, valor, plan, cuando){
   return (valor || plan) ? fila(pregunta, valor||'—', 'neutro', plan, cuando) : '';
@@ -487,11 +585,12 @@ function fichaCliente(c){
   const cj=c.customerJourney||{};
   h+=grupo('Customer Journey', CJ_PUNTOS.map(([k,l])=>{
     const d=cj[k]; if(!d) return '';
-    return d.ejeMejora ? fila(l,'Eje de mejora','mal',d.que,d.cuando) : fila(l,'Correcto','ok');
+    return d.ejeMejora ? fila(l,'Eje de mejora','mal',d.que,d.cuando,`cliente/customerJourney/${k}`) : fila(l,'Correcto','ok');
   }).join(''));
   const tc=c.tiempoCompra||{};
   [['drive','Cliente Drive'],['tienda','Cliente Tienda'],['mixto','Cliente Mixto']].forEach(([k,l])=>{
     const d=tc[k]; if(!d) return;
+    if(d.noAplica){ h+=grupo(l, fila('Este tipo de cliente en la visita','No aplica','neutro')); return; }
     let f='';
     const hr=d.horario||{};
     if(hr.horaEntrada||hr.horaSalida) f+=fila('Hora entrada – salida', `${hr.horaEntrada||'?'} – ${hr.horaSalida||'?'}`, 'neutro');
@@ -512,14 +611,16 @@ function fichaCliente(c){
   });
   const cap=c.captacion||{};
   h+=grupo('Captación',
-    filaSiNo('¿Cumple el objetivo semanal de cheques de captación?', cap.cheques, true)
-    + [1,2,3].map(i=>filaSiNo(`¿Crece el nº de clientes vs semana anterior? (semana -${i})`, cap['creceSemana'+i], true)).join('')
+    filaSiNo('¿Cumple el objetivo semanal de cheques de captación?', cap.cheques, true, 'cliente/captacion/cheques')
+    + [1,2,3].map(i=>filaSiNo(`¿Crece el nº de clientes vs semana anterior? (semana -${i})`, cap['creceSemana'+i], true, `cliente/captacion/creceSemana${i}`)).join('')
     + (cap.tasaConversion ? filaTexto('Tasa de conversión de cheques', cap.tasaConversion.valor, cap.tasaConversion.plan, cap.tasaConversion.fecha) : ''));
   const comp=c.competencia ? Object.values(c.competencia).filter(Boolean) : [];
-  h+=grupo('Competencia', comp.map(d=>d.competidor||d.observaciones||d.acciones ?
+  if(c.competenciaNoAplica) h+=grupo('Competencia', fila('Competencia en la visita','No aplica','neutro'));
+  else h+=grupo('Competencia', comp.map(d=>d.competidor||d.observaciones||d.acciones ?
     fila(d.competidor||'Competidor', '', 'neutro', [d.observaciones, d.acciones && 'Acciones: '+d.acciones].filter(Boolean).join(' — ')) : '').join(''));
   const t=c.transporte;
-  if(t){
+  if(c.transporteNoAplica) h+=grupo('Transporte', fila('Transporte en la visita','No aplica','neutro'));
+  else if(t){
     let f='';
     if(t.tipoCliente) f+=fila('Tipo de cliente', t.tipoCliente, 'neutro');
     TR_VAL.forEach(([vk,vl])=>{ const v=(t.valoraciones||{})[vk]; if(v) f+=fila(vl, v, /malo/i.test(v)?'mal':(/bueno|excelente/i.test(v)?'ok':'neutro')); });
@@ -555,12 +656,12 @@ function fichaSecciones(s){
       <thead><tr><th>Familia</th>${ATRIB.map(([,l])=>`<th>${l}</th>`).join('')}</tr></thead><tbody>
       ${filasFam.map(([k,l])=>{ const d=fam[k];
         return `<tr class="fila ${peor(d)<=2?'mal':'bien'}"><td><strong>${esc(l)}</strong></td>${ATRIB.map(([a])=>`<td>${d[a]?`<span class="nota n${esc(d[a])}">${esc(d[a])}</span>`:'—'}</td>`).join('')}</tr>
-          ${d.plan||d.cuando?`<tr class="fila ${peor(d)<=2?'mal':'bien'}"><td colspan="8" style="text-align:left;padding-top:0">${planHtml(d.plan,d.cuando)}</td></tr>`:''}`;
+          ${d.plan||d.cuando||peor(d)<=2?`<tr class="fila ${peor(d)<=2?'mal':'bien'}"><td colspan="8" style="text-align:left;padding-top:0">${planHtml(d.plan,d.cuando)}${peor(d)<=2?hechaHtml(`secciones/familias/${k}`, d.cuando):''}</td></tr>`:''}`;
       }).join('')}</tbody></table></div></div>`;
   }
   const imp=s.implantacion||{};
   IMPL_PUNTOS.forEach(([p,pl])=>{
-    h+=grupo('Implantación — '+pl, IMPL_PREG.map(([q,ql])=>filaSiNo(ql, imp[`${p}_${q}`], true)).join(''));
+    h+=grupo('Implantación — '+pl, IMPL_PREG.map(([q,ql])=>filaSiNo(ql, imp[`${p}_${q}`], true, `secciones/implantacion/${p}_${q}`)).join(''));
   });
   return h || VACIO;
 }
@@ -568,17 +669,17 @@ function fichaSecciones(s){
 function fichaGestion(g){
   if(!g) return VACIO;
   let h='';
-  h+=grupo('Productividad', filaSiNo(GESTION_GRUPOS[0][2][0][1], (g.productividad||{}).productividad, true));
+  h+=grupo('Productividad', filaSiNo(GESTION_GRUPOS[0][2][0][1], (g.productividad||{}).productividad, true, 'gestion/productividad/productividad'));
   const ho=g.horas||{};
   const nums=(a,b)=>[a&&a.valor&&'Personas: '+a.valor, b&&b.valor&&'Horas: '+b.valor].filter(Boolean).join(' · ');
   h+=grupo('Horas',
     (ho.excesos ? fila('¿Hay personas con excesos de horas?', ho.excesos.cumple?'Sí':'No', ho.excesos.cumple?'mal':'ok',
-        [nums(ho.excesosPersonas, ho.excesosHoras), ho.excesos.plan].filter(Boolean).join(' — '), ho.excesos.fecha) : '')
+        [nums(ho.excesosPersonas, ho.excesosHoras), ho.excesos.plan].filter(Boolean).join(' — '), ho.excesos.fecha, 'gestion/horas/excesos') : '')
     + (ho.defecto ? fila('¿Hay personas con defecto de horas?', ho.defecto.cumple?'Sí':'No', ho.defecto.cumple?'mal':'ok',
-        [nums(ho.defectoPersonas, ho.defectoHoras), ho.defecto.plan].filter(Boolean).join(' — '), ho.defecto.fecha) : ''));
+        [nums(ho.defectoPersonas, ho.defectoHoras), ho.defecto.plan].filter(Boolean).join(' — '), ho.defecto.fecha, 'gestion/horas/defecto') : ''));
   const it=g.indiceTienda;
-  if(it) h+=grupo('Índice de la tienda', it.valor ? fila('¿El índice de la tienda es?', it.valor, /peor/i.test(it.valor)?'mal':(/mejor/i.test(it.valor)?'ok':'neutro'), it.plan, it.cuando) : '');
-  h+=grupo('Recursos vs afluencia', filaSiNo(GESTION_GRUPOS[1][2][0][1], (g.recursos||{}).recursosAfluencia, true));
+  if(it) h+=grupo('Índice de la tienda', it.valor ? fila('¿El índice de la tienda es?', it.valor, /peor/i.test(it.valor)?'mal':(/mejor/i.test(it.valor)?'ok':'neutro'), it.plan, it.cuando, 'gestion/indiceTienda') : '');
+  h+=grupo('Recursos vs afluencia', filaSiNo(GESTION_GRUPOS[1][2][0][1], (g.recursos||{}).recursosAfluencia, true, 'gestion/recursos/recursosAfluencia'));
   [['horasPunta','Horas punta — ¿todos disponibles para el cliente?'],['horasValle','Horas valle — ¿tareas acordes a la situación?']].forEach(([nodo,titulo])=>{
     const d=g[nodo]||{};
     h+=grupo(titulo, DEPTS.map(([k,l])=>{
@@ -586,12 +687,12 @@ function fichaGestion(g){
       const b=d[k];
       if(!b && !n) return '';
       if(!b) return fila(l+(n?` (${n})`:''), '—', 'neutro');
-      return fila(l+(n?` — ${n}`:''), b.cumple?'Sí':'No', b.cumple?'ok':'mal', b.plan, b.fecha);
+      return fila(l+(n?` — ${n}`:''), b.cumple?'Sí':'No', b.cumple?'ok':'mal', b.plan, b.fecha, `gestion/${nodo}/${k}`);
     }).join(''));
   });
   GESTION_GRUPOS.slice(2).forEach(([nodo,titulo,items])=>{
     const d=g[nodo]||{};
-    h+=grupo(titulo, items.map(([k,l,bueno])=>filaSiNo(l, d[k], bueno)).join(''));
+    h+=grupo(titulo, items.map(([k,l,bueno])=>filaSiNo(l, d[k], bueno, `gestion/${nodo}/${k}`)).join(''));
   });
   return h || VACIO;
 }
@@ -608,12 +709,20 @@ window.verDetalle = async function(id){
     catch(e){ alert('No se pudo cargar la visita: '+e.message); return; }
     detallesCache[id]={actualizado:marca, v};
   }
+  pintarFicha(id, v);
+  verPestana('cliente');
+  document.getElementById('modal-detalle').classList.add('show');
+};
+function pintarFicha(id, v){
+  fichaActual = {id, v};
   const c = v.cabecera || {};
   document.getElementById('ficha-titulo').textContent = `${c.tienda||'?'} · ${fES(c.fecha)}`;
   document.getElementById('ficha-meta').innerHTML =
     `Director Regional: <strong>${esc(c.director||'—')}</strong> · Director de Tienda: <strong>${esc(c.directorTienda||'—')}</strong><br>`
-    + `${esc(c.tipoVisita||'')} · ${c.estado==='completada'?'<span class="badge badge-completada">Completada</span>':'<span class="badge badge-pendiente">Pendiente</span>'}`
-    + (c.origen==='Forms'?' <span style="font-size:.72rem;color:#999">(empezada en Forms)</span>':'');
+    + `${esc(c.tipoVisita||'')} · ${badgeEstado(c.estado)}`
+    + (c.origen==='Forms'?' <span style="font-size:.72rem;color:#999">(empezada en Forms)</span>':'')
+    + (perfil && perfil.rol==='admin' && c.estado==='completada' ? ` <button class="btn-reabrir" onclick="reabrirVisita('${id}')">↺ Reabrir visita</button>` : '');
+  document.getElementById('ficha-resumen').innerHTML = resumenVisitaHtml(c, visitasCache[id]||{}) + adminAccionesHtml(id, c);
   const bloques = {cliente: fichaCliente(v.cliente), secciones: fichaSecciones(v.secciones), gestion: fichaGestion(v.gestion)};
   Object.entries(bloques).forEach(([k,html])=>{
     document.getElementById('ficha-'+k).innerHTML = html;
@@ -624,8 +733,102 @@ window.verDetalle = async function(id){
   document.querySelector('.ficha-json').open = false;
   // «Datos técnicos» (la visita tal como está guardada): solo para administración
   document.querySelector('.ficha-json').classList.toggle('hidden', !(perfil && perfil.rol==='admin'));
-  verPestana('cliente');
-  document.getElementById('modal-detalle').classList.add('show');
+}
+// «Resumen de la visita»: quién y cuándo, completitud y acciones (de la ficha precalculada).
+function resumenVisitaHtml(c, r){
+  const fh=iso=>{ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('es-ES')+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}); };
+  const quien=o=>(o && (o.nombre||o.email))||'';
+  const lin=[];
+  lin.push(`<b>Iniciada:</b> ${fh(c.creado)||'—'}${quien(c.registradoPor)?' por '+esc(quien(c.registradoPor)):(c.origen==='Forms'?' (cargada de los Forms)':'')}`);
+  if(c.continuadoPor) lin.push(`<b>Continuada:</b> ${fh(c.continuadoPor.fecha)} por ${esc(quien(c.continuadoPor))}`);
+  lin.push(c.estado==='completada'
+    ? `<b>Finalizada:</b> ${fh(c.completado)||'—'}${c.completadoPor?' por '+esc(quien(c.completadoPor)):''}`
+    : `<b>Finalizada:</b> todavía no (pendiente)`);
+  const k=r.completitud;
+  if(k && k.total){
+    lin.push(`<b>Completitud:</b> ${k.completas} de ${k.total} pantallas contestadas o «No aplica»`);
+    if((k.sinContestar||[]).length) lin.push(`<b>Pantallas sin contestar (${k.sinContestar.length}):</b> ${esc(k.sinContestar.join(', '))}`);
+    if((k.noAplica||[]).length) lin.push(`<b>No aplica:</b> ${esc(k.noAplica.join(', '))}`);
+  } else lin.push('<b>Completitud:</b> se calculará la próxima vez que alguien abra o guarde la visita');
+  const a=r.acciones||{};
+  if(a.total) lin.push(`<b>Ejes de mejora con plan:</b> ${a.total} · hechos: ${a.hechas||0} · sin plan o sin fecha: ${a.sinPlanOFecha||0} · con fecha vencida: ${a.vencidas||0}`);
+  if(c.estado==='anulada') lin.push(`<b>Anulada:</b> ${fh(c.anulada)}${c.fusionadaEn?' · sus respuestas se pasaron a otra visita de la tienda':''}`);
+  return `<div class="resumen-visita">${lin.join('<br>')}</div>`;
+}
+// ══ ADMINISTRACIÓN: anular, fusionar y recuperar visitas (nunca se borra nada) ══
+function adminAccionesHtml(id, c){
+  if(!(perfil && perfil.rol==='admin')) return '';
+  if(c.estado==='anulada') return `<div class="admin-acciones"><button class="btn-reabrir" onclick="recuperarVisita('${id}')">↺ Recuperar visita</button></div>`;
+  const otras=Object.entries(visitasCache).filter(([k,r])=>k!==id && r.tienda===c.tienda && r.estado!=='anulada')
+    .sort((a,b)=>(b[1].fecha||'').localeCompare(a[1].fecha||''));
+  return `<div class="admin-acciones"><b style="color:#777">Administración:</b>`
+    + (otras.length ? `<select id="fusionar-destino">${otras.map(([k,r])=>`<option value="${k}">${fES(r.fecha)} · ${esc(r.director||'')} · ${r.estado==='completada'?'completada':'pendiente'} · ${(r.completitud||{}).completas??'?'}/${(r.completitud||{}).total??'?'}</option>`).join('')}</select>
+      <button class="btn-reabrir" onclick="fusionarVisita('${id}')">Fusionar en esa visita</button>` : '')
+    + `<button class="btn-reabrir" style="border-color:#999;color:#777" onclick="anularVisita('${id}')">Anular</button></div>`;
+}
+function hojasVisita(o, pre, out){
+  Object.entries(o||{}).forEach(([k,x])=>{ const r=pre?pre+'/'+k:k;
+    if(x && typeof x==='object') hojasVisita(x, r, out); else if(x!=='' && x!=null) out[r]=x; });
+  return out;
+}
+async function reindexar(id, v, extra){
+  const fc=fichaCliente, fs=fichaSecciones, fg=fichaGestion;
+  await fb.update(_ref(db,'resumenVisitas/'+id), Object.assign({
+    alertas:{cliente:contarMal(fc(v.cliente)), secciones:contarMal(fs(v.secciones)), gestion:contarMal(fg(v.gestion))},
+    acciones: accionesMejora(v), actualizado:new Date().toISOString()}, extra||{}));
+}
+window.anularVisita = async function(id){
+  const r=visitasCache[id]||{};
+  if(!confirm(`¿Anular la visita de ${r.tienda} del ${fES(r.fecha)}? Dejará de verse en el Seguimiento y en los avisos de pendientes. No se borra: se puede recuperar.`)) return;
+  try{
+    await fb.update(_ref(db,'visitas/'+id+'/cabecera'), {estado:'anulada', anulada:new Date().toISOString(), pendienteTienda:null});
+    await fb.update(_ref(db,'resumenVisitas/'+id), {estado:'anulada', actualizado:new Date().toISOString()});
+    delete detallesCache[id]; cerrarFicha();
+  }catch(e){ alert('No se pudo anular: '+e.message); }
+};
+window.recuperarVisita = async function(id){
+  const r=visitasCache[id]||{};
+  if(!confirm(`¿Recuperar la visita de ${r.tienda} del ${fES(r.fecha)}? Volverá como pendiente.`)) return;
+  try{
+    await fb.update(_ref(db,'visitas/'+id+'/cabecera'), {estado:'pendiente', anulada:null, fusionadaEn:null, pendienteTienda:r.tienda});
+    await fb.update(_ref(db,'resumenVisitas/'+id), {estado:'pendiente', actualizado:new Date().toISOString()});
+    delete detallesCache[id]; cerrarFicha();
+  }catch(e){ alert('No se pudo recuperar: '+e.message); }
+};
+// Copia a la visita destino las respuestas que solo están en esta; si una respuesta existe en las dos
+// con valor distinto, se queda la del destino. Después esta visita queda anulada (no se borra).
+window.fusionarVisita = async function(id){
+  const destino=document.getElementById('fusionar-destino').value;
+  try{
+    const [vO, vD]=await Promise.all([_get(_ref(db,'visitas/'+id)), _get(_ref(db,'visitas/'+destino))]).then(r=>r.map(x=>x.val()||{}));
+    const hO={}, hD={};
+    ['cliente','secciones','gestion','hechas'].forEach(b=>{ hojasVisita(vO[b], b, hO); hojasVisita(vD[b], b, hD); });
+    const copiar={}; let distintas=0;
+    Object.entries(hO).forEach(([ruta,val])=>{ if(!(ruta in hD)) copiar[ruta]=val; else if(hD[ruta]!==val) distintas++; });
+    const rD=visitasCache[destino]||{};
+    if(!confirm(`Fusionar en la visita de ${rD.tienda} del ${fES(rD.fecha)}:\n\n· Se copiarán ${Object.keys(copiar).length} respuestas que solo están en esta visita.\n· ${distintas} respuestas están en las dos con valor distinto: se queda la de la visita destino.\n\nDespués esta visita quedará anulada (se puede recuperar). ¿Continuar?`)) return;
+    if(Object.keys(copiar).length) await fb.update(_ref(db,'visitas/'+destino), copiar);
+    await fb.update(_ref(db,'visitas/'+id+'/cabecera'), {estado:'anulada', anulada:new Date().toISOString(), fusionadaEn:destino, pendienteTienda:null});
+    await fb.update(_ref(db,'resumenVisitas/'+id), {estado:'anulada', actualizado:new Date().toISOString()});
+    const vNuevo=(await _get(_ref(db,'visitas/'+destino))).val()||{};
+    // la completitud sale del formulario de Registro: queda pendiente hasta «Recalcular resumen» o hasta que se abra la visita
+    await reindexar(destino, vNuevo, {completitud:null});
+    delete detallesCache[id]; delete detallesCache[destino];
+    cerrarFicha();
+    alert(`Hecho: ${Object.keys(copiar).length} respuestas copiadas y visita anulada.`);
+  }catch(e){ alert('No se pudo fusionar: '+e.message); }
+};
+// Administración: vuelve a dejar pendiente una visita cerrada (para que la terminen).
+window.reabrirVisita = async function(id){
+  const r=visitasCache[id]||{};
+  if(!confirm(`¿Reabrir la visita de ${r.tienda||''} del ${fES(r.fecha)}? Volverá a aparecer como pendiente para que la completen.`)) return;
+  try{
+    await fb.update(_ref(db,'visitas/'+id+'/cabecera'), {estado:'pendiente', pendienteTienda:r.tienda, completado:null, completadoPor:null});
+    await fb.update(_ref(db,'resumenVisitas/'+id), {estado:'pendiente', completado:'', completadoPor:'', actualizado:new Date().toISOString()});
+    delete detallesCache[id];
+    cerrarFicha();
+    alert('Visita reabierta: aparecerá como pendiente en su tienda.');
+  }catch(e){ alert('No se pudo reabrir: '+e.message); }
 };
 window.verPestana = function(tab){
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('activa', b.dataset.tab===tab));

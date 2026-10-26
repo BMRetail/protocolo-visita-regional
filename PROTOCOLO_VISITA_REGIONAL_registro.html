@@ -90,6 +90,10 @@
   .tabla-usu th{text-align:left;font-size:.68rem;color:#777;padding:6px;border-bottom:2px solid var(--gris-borde)}
   .tabla-usu td{padding:6px;border-bottom:1px solid var(--gris-borde);vertical-align:top}
   .chip-u{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--bm-blue-light);color:var(--bm-blue)}
+  .na-check{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.85rem;color:var(--bm-blue);
+    background:var(--bm-blue-light);border-radius:8px;padding:8px 10px;margin:8px 0 0;cursor:pointer}
+  .na-check input{width:auto;margin:0}
+  section.no-aplica .na-oculta{display:none !important}
   .menu-op{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--blanco);color:var(--ink);
     border:1.5px solid var(--gris-borde);border-radius:var(--radius);padding:18px;margin-bottom:12px;cursor:pointer;box-shadow:var(--shadow);font-family:inherit}
   .menu-op:hover{border-color:var(--bm-blue)}
@@ -242,9 +246,10 @@
   <section id="pantalla-competencia" class="hidden">
     <div class="card">
       <h2>6. Competencia</h2>
+      <label class="na-check"><input type="checkbox" id="na-competencia" onchange="setNoAplica('competencia', this.checked)"> No aplica en esta visita</label>
     </div>
-    <div id="competencia-lista"></div>
-    <div class="card" id="competencia-agregar-card">
+    <div id="competencia-lista" class="na-oculta"></div>
+    <div class="card na-oculta" id="competencia-agregar-card">
       <button class="btn btn-ghost" id="btn-agregar-competidor" onclick="agregarCompetidor()">+ Añadir otro competidor</button>
     </div>
     <div class="card">
@@ -257,7 +262,9 @@
   <section id="pantalla-transporte" class="hidden">
     <div class="card">
       <h2>7. Transporte</h2>
-      <label style="margin-top:0">Tipo de cliente</label>
+      <label class="na-check"><input type="checkbox" id="na-transporte" onchange="setNoAplica('transporte', this.checked)"> No aplica en esta visita</label>
+      <div class="na-oculta">
+      <label>Tipo de cliente</label>
       <select id="tr-tipocliente" onchange="guardarTransporte()">
         <option value="">Selecciona</option>
         <option>Profesional</option>
@@ -277,6 +284,7 @@
       <select id="tr-nps" onchange="guardarTransporte()"><option value="">Selecciona</option></select>
       <label>Si pudiera mejorar una sola cosa de nuestro transporte, ¿qué sería?</label>
       <textarea id="tr-quemejorar" onblur="guardarTransporte()"></textarea>
+      </div>
     </div>
     <div class="card">
       <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
@@ -295,7 +303,7 @@
       <label style="margin-top:0">Nombre cliente (partner y razón social)</label>
       <input type="text" id="cp-nombre" onblur="guardarClientePrincipal()">
       <label>Obra</label>
-      <input type="text" id="cp-obra" onblur="guardarClientePrincipal()">
+      <input type="text" id="cp-obra" data-opcional onblur="guardarClientePrincipal()">
       <label>Observaciones</label>
       <textarea id="cp-observaciones" onblur="guardarClientePrincipal()"></textarea>
       <label>Acciones</label>
@@ -344,8 +352,13 @@
   <!-- ══ PANTALLA: FIN GESTIÓN (fin del protocolo completo) ══ -->
   <section id="pantalla-fin-gestion" class="hidden">
     <div class="card">
-      <h2>🎉 Protocolo completo</h2>
-      <p>Cliente, Secciones y Gestión guardados correctamente, sin perder nada en el camino.</p>
+      <h2 id="fin-titulo">🎉 Protocolo completo</h2>
+      <p id="fin-texto">Cliente, Secciones y Gestión guardados correctamente, sin perder nada en el camino.</p>
+      <div id="fin-faltan" class="hidden" style="background:#fdf0d5;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:.85rem"></div>
+      <div id="fin-decidir" class="hidden" style="margin-bottom:14px">
+        <button class="btn" onclick="dejarVisitaPendiente()">Dejar la visita pendiente (recomendado)</button>
+        <button class="btn btn-ghost" style="margin-left:8px" onclick="cerrarVisitaIgualmente()">Cerrarla igualmente</button>
+      </div>
       <button class="btn btn-ghost" onclick="irAtras()">‹ Atrás</button>
       <button class="btn" style="margin-left:8px" onclick="verJSON()">Ver datos guardados de esta visita</button>
       <button class="btn btn-ghost" style="margin-left:8px" onclick="nuevaVisita()">Registrar otra visita</button>
@@ -381,6 +394,27 @@
       <button class="btn" onclick="guardarDirectoresRegionalesNuevos()">Añadir</button>
       <button class="btn btn-ghost" onclick="cerrarModalDirectoresRegionales()">Cerrar</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: quedan preguntas sin contestar en la pantalla (al pulsar Continuar) ══ -->
+<div class="modal-back" id="modal-faltan">
+  <div class="modal" style="max-width:420px">
+    <h2 style="color:var(--bm-blue);margin-top:0">⚠ Te falta algo en esta pantalla</h2>
+    <div id="modal-faltan-texto" style="font-size:.9rem;margin-bottom:14px"></div>
+    <button class="btn" style="width:100%" onclick="document.getElementById('modal-faltan').classList.remove('show')">Contestar ahora</button>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" id="modal-faltan-seguir">Lo retomaré después ▸</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: la tienda ya tiene una visita pendiente (evita visitas duplicadas) ══ -->
+<div class="modal-back" id="modal-pendiente">
+  <div class="modal" style="max-width:420px">
+    <h2 style="color:var(--bm-blue);margin-top:0">📌 Ya hay una visita pendiente</h2>
+    <div id="modal-pendiente-texto" style="font-size:.88rem;margin-bottom:14px"></div>
+    <button class="btn" style="width:100%" id="modal-pendiente-continuar">Continuar la visita pendiente ▸</button>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" id="modal-pendiente-nueva">No, empezar una visita nueva</button>
+    <button class="link-btn" style="display:block;margin:12px auto 0" onclick="document.getElementById('modal-pendiente').classList.remove('show')">Cancelar</button>
   </div>
 </div>
 
@@ -451,7 +485,7 @@ const CUSTOMER_JOURNEY_PUNTOS = [
   {key:"salida", label:"Salida"},
 ];
 
-let db=null, _ref,_onValue,_set,_push,_child,_get,_query,_orderByChild,_equalTo;
+let db=null, _ref,_onValue,_set,_push,_child,_get,_query,_orderByChild,_equalTo,_update;
 let fbauthMod=null, authInst=null, _initializeApp=null, perfil=null, claveUsuario=null, appArrancada=false, mensajeLogin='';
 let visitaActualId=null;
 let directoresCache={};
@@ -598,7 +632,7 @@ async function iniciarFirebase(cfg){
     return;
   }
   _ref=fbdb.ref; _onValue=fbdb.onValue; _set=fbdb.set; _push=fbdb.push; _child=fbdb.child;
-  _get=fbdb.get; _query=fbdb.query; _orderByChild=fbdb.orderByChild; _equalTo=fbdb.equalTo;
+  _get=fbdb.get; _query=fbdb.query; _orderByChild=fbdb.orderByChild; _equalTo=fbdb.equalTo; _update=fbdb.update;
   _initializeApp=initializeApp; fbauthMod=fbauth;
 
   const app=initializeApp(cfg);
@@ -610,6 +644,23 @@ async function iniciarFirebase(cfg){
     alEntrar(user);
   });
 }
+// ══ «NO APLICA» (Cliente Drive/Tienda/Mixto, Competencia, Transporte) ══
+const NO_APLICA = {
+  'ct-drive':['pantalla-ct-drive','cliente/tiempoCompra/drive/noAplica'],
+  'ct-tienda':['pantalla-ct-tienda','cliente/tiempoCompra/tienda/noAplica'],
+  'ct-mixto':['pantalla-ct-mixto','cliente/tiempoCompra/mixto/noAplica'],
+  'competencia':['pantalla-competencia','cliente/competenciaNoAplica'],
+  'transporte':['pantalla-transporte','cliente/transporteNoAplica'],
+};
+function aplicarNoAplicaUI(clave, valor){
+  document.getElementById(NO_APLICA[clave][0]).classList.toggle('no-aplica', !!valor);
+  const cb=document.getElementById('na-'+clave); if(cb) cb.checked=!!valor;
+}
+window.setNoAplica = function(clave, valor){
+  aplicarNoAplicaUI(clave, valor);
+  guardarCampo(NO_APLICA[clave][1], valor ? true : null);
+};
+
 // ══ INICIO (menú) ══
 window.irARegistrar = function(){ historialPantallas=['pantalla-inicio']; mostrarPantalla('pantalla-cabecera'); };
 window.irASeguimiento = function(){ location.href='PROTOCOLO_VISITA_REGIONAL_resumen.html'; };
@@ -712,7 +763,7 @@ function comprobarVisitaPendiente(){
   if(!guardado || !guardado.visitaId) return;
   _onValue(ref(`visitas/${guardado.visitaId}/cabecera`), s=>{
     const cab = s.val();
-    if(!cab || cab.estado==='completada'){ borrarVisitaPendienteGuardada(); return; }
+    if(!cab || cab.estado==='completada' || cab.estado==='anulada'){ borrarVisitaPendienteGuardada(); return; }
     document.getElementById('banner-visita-info').textContent =
       `${cab.tienda||'?'} · ${cab.director||'?'} · ${cab.fecha||'?'}`;
     document.getElementById('banner-visita-pendiente').classList.remove('hidden');
@@ -730,6 +781,7 @@ window.continuarVisitaPendiente = async function(){
     _onValue(ref(`visitas/${guardado.visitaId}`), s=>{ limpiarFormulario(); restaurarVisitaEnFormulario(s.val()||{}); resolve(); }, {onlyOnce:true});
   });
   visitaActualId = guardado.visitaId;
+  anotarContinuada(guardado.visitaId);
   historialPantallas = ['pantalla-cabecera'];
   document.getElementById('banner-visita-pendiente').classList.add('hidden');
   document.getElementById('aviso-pendientes-tienda').classList.add('hidden');
@@ -740,7 +792,7 @@ window.continuarVisitaPendiente = async function(){
 
 // ══ VISITAS PENDIENTES DE LA TIENDA (empezadas en otro dispositivo o importadas de los Forms) ══
 // Cada visita sin terminar lleva cabecera.pendienteTienda = <tienda>; al llegar al final
-// de Gestión se borra ese campo y se marca estado:'completada' (ver marcarVisitaCompletada).
+// de Gestión se borra ese campo y se marca estado:'completada' (ver cerrarVisita).
 function fechaES(iso){ const p=(iso||'').split('-'); return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : (iso||''); }
 window.comprobarPendientesTienda = async function(){
   const aviso = document.getElementById('aviso-pendientes-tienda');
@@ -768,6 +820,8 @@ window.comprobarPendientesTienda = async function(){
   `;
   aviso.classList.remove('hidden');
 };
+function firmaUsuario(){ return {email:(authInst.currentUser.email||'').toLowerCase(), nombre:(perfil&&perfil.nombre)||'', fecha:new Date().toISOString()}; }
+function anotarContinuada(id){ _set(ref(`visitas/${id}/cabecera/continuadoPor`), firmaUsuario()).catch(e=>console.error('[Protocolo Visita] continuadoPor', e)); }
 window.continuarVisitaTienda = async function(id){
   let datos;
   try{ datos = (await _get(ref(`visitas/${id}`))).val(); }
@@ -776,22 +830,93 @@ window.continuarVisitaTienda = async function(id){
   limpiarFormulario();
   restaurarVisitaEnFormulario(datos);
   visitaActualId = id;
+  anotarContinuada(id);
   document.getElementById('banner-visita-pendiente').classList.add('hidden');
   document.getElementById('aviso-pendientes-tienda').classList.add('hidden');
   historialPantallas = [];
   irA('pantalla-cj');
   historialPantallas = ['pantalla-cabecera'];
 };
-async function marcarVisitaCompletada(){
+// Pantallas obligatorias del protocolo y dónde guarda cada una (las de Cliente Drive/Tienda/Mixto
+// y Competencia son opcionales: «si no aplica, déjalo en blanco»).
+function pantallasObligatorias(){ return [
+  ['pantalla-cj','Customer Journey',v=>(v.cliente||{}).customerJourney],
+  ['pantalla-captacion','Captación',v=>(v.cliente||{}).captacion],
+  ['pantalla-transporte','Transporte',v=>(v.cliente||{}).transporte],
+  ['pantalla-cartera','Cartera',v=>(v.cliente||{}).cartera],
+  ['pantalla-sec-rupturas','Rupturas',v=>(v.secciones||{}).rupturas],
+  ...FAMILIAS_LINEAL.map(f=>[`pantalla-fam-${f.key}`, f.label, v=>((v.secciones||{}).familias||{})[f.key]]),
+  ['pantalla-sec-implantacion','Implantación comercial',v=>(v.secciones||{}).implantacion],
+  ['pantalla-ges-productividad','Productividad',v=>(v.gestion||{}).productividad],
+  ['pantalla-ges-horas','Horas',v=>(v.gestion||{}).horas],
+  ['pantalla-ges-indice','Índice de la tienda',v=>(v.gestion||{}).indiceTienda],
+  ['pantalla-ges-recursos','Recursos vs afluencia',v=>(v.gestion||{}).recursos],
+  ['pantalla-ges-horaspunta','Horas punta',v=>(v.gestion||{}).horasPunta],
+  ['pantalla-ges-horasvalle','Horas valle',v=>(v.gestion||{}).horasValle],
+  ['pantalla-ges-seguridad','Seguridad',v=>(v.gestion||{}).seguridad],
+  ['pantalla-ges-ventas','Ventas vs N-1',v=>(v.gestion||{}).ventas],
+  ['pantalla-ges-precios','Precios y cheques',v=>(v.gestion||{}).precios],
+  ['pantalla-ges-demarca','Demarca y stock',v=>(v.gestion||{}).demarcaStock],
+  ['pantalla-ges-workflows','Workflows',v=>(v.gestion||{}).workflows],
+]; }
+function tieneDatos(o){ return o!=null && (typeof o!=='object' || Object.values(o).some(tieneDatos)) && o!=='' ; }
+window.irAPantalla = function(id){ irA(id); };
+async function evaluarFinal(){
   if(!visitaActualId) return;
+  const titulo=document.getElementById('fin-titulo'), texto=document.getElementById('fin-texto'),
+        faltan=document.getElementById('fin-faltan'), decidir=document.getElementById('fin-decidir');
+  decidir.classList.add('hidden');
+  let v={};
+  try{ v=(await _get(ref(`visitas/${visitaActualId}`))).val()||{}; }catch(e){ console.error('[Protocolo Visita] leer visita', e); }
+  const obligatorias=pantallasObligatorias();
+  if(obligatorias.every(([,,f])=>!tieneDatos(f(v)))){
+    // Visita sin ninguna respuesta: no se cierra (seguiría saliendo como completada y vacía).
+    titulo.textContent='⚠ La visita está vacía';
+    texto.textContent='No has contestado ninguna pregunta, así que la visita no se ha cerrado: sigue pendiente. Vuelve atrás y rellénala, o empieza desde «🏠 Inicio».';
+    faltan.classList.add('hidden');
+    return;
+  }
+  const comp=completitudDOM();
+  const conPreguntas=comp.detalle.filter(d=>!d.noAplica && d.preguntas>0);
+  const conPlanes=comp.detalle.filter(d=>d.planes>0);
+  const enlace=(d,n)=>`<button class="link-btn" style="font-size:.85rem" onclick="irAPantalla('${d.id}')">${d.l}</button> (${n})`;
+  if(!conPreguntas.length && !conPlanes.length){
+    titulo.textContent='🎉 Protocolo completo';
+    texto.textContent='Cliente, Secciones y Gestión guardados correctamente, sin perder nada en el camino.';
+    faltan.classList.add('hidden');
+    await cerrarVisita();
+    return;
+  }
+  titulo.textContent='⚠ Faltan cosas por completar';
+  texto.textContent='La visita todavía no está cerrada. Pulsa una pantalla para completarla ahora, o déjala pendiente y termínala otro día.';
+  faltan.innerHTML = (conPreguntas.length ? '<b>Preguntas sin contestar</b> (número por pantalla):<br>' + conPreguntas.map(d=>enlace(d,d.preguntas)).join(' · ') : '')
+    + (conPlanes.length ? `${conPreguntas.length?'<br><br>':''}<b>Ejes de mejora sin plan o sin fecha:</b><br>` + conPlanes.map(d=>enlace(d,d.planes)).join(' · ') : '');
+  faltan.classList.remove('hidden');
+  decidir.classList.remove('hidden');
+  clearTimeout(_tIndice);
+  actualizarIndiceVisita(visitaActualId);
+}
+async function cerrarVisita(){
   try{
+    await _set(ref(`visitas/${visitaActualId}/cabecera/completadoPor`), firmaUsuario());
     await _set(ref(`visitas/${visitaActualId}/cabecera/estado`), 'completada');
     await _set(ref(`visitas/${visitaActualId}/cabecera/completado`), new Date().toISOString());
     await _set(ref(`visitas/${visitaActualId}/cabecera/pendienteTienda`), null);
     clearTimeout(_tIndice);
     await actualizarIndiceVisita(visitaActualId);
-  }catch(e){ showToast('⚠ No se pudo marcar la visita como completada: '+e.message, 4000); }
+    borrarVisitaPendienteGuardada();
+  }catch(e){ showToast('⚠ No se pudo cerrar la visita: '+e.message, 4000); }
 }
+window.dejarVisitaPendiente = function(){
+  showToast('La visita queda pendiente: la encontrarás en el inicio para terminarla.', 3500);
+  irInicio();
+};
+window.cerrarVisitaIgualmente = async function(){
+  await cerrarVisita();
+  document.getElementById('fin-decidir').classList.add('hidden');
+  document.getElementById('fin-titulo').textContent='✅ Visita cerrada';
+  document.getElementById('fin-texto').textContent='Se ha cerrado con lo que falta anotado: aparecerá en el Seguimiento de visitas.';
+};
 
 // Nota importante: estas funciones de "restaurar" NUNCA deben llamar a las funciones
 // setX/guardarX normales de la app — esas releen el formulario entero y lo vuelven a
@@ -839,6 +964,9 @@ function restaurarVisitaEnFormulario(datos){
   document.getElementById('cj-contexto').textContent = `${cab.tienda||''} · ${cab.director||''} · ${cab.fecha||''}`;
 
   const cliente = datos.cliente || {};
+  ['drive','tienda','mixto'].forEach(k=>aplicarNoAplicaUI('ct-'+k, ((cliente.tiempoCompra||{})[k]||{}).noAplica===true));
+  aplicarNoAplicaUI('competencia', cliente.competenciaNoAplica===true);
+  aplicarNoAplicaUI('transporte', cliente.transporteNoAplica===true);
 
   const cj = cliente.customerJourney || {};
   CUSTOMER_JOURNEY_PUNTOS.forEach(p=>{
@@ -1050,6 +1178,7 @@ function contarEjesMejora(v){
   if(c){
     Object.values(c.customerJourney||{}).forEach(d=>{ if(d && d.ejeMejora) n.cliente++; });
     Object.values(c.tiempoCompra||{}).forEach(d=>{
+      if((d||{}).noAplica) return;
       const p=(d||{}).nps; if(!p) return;
       if(p.tipoCliente==='Compró'){
         if(NOTA_MALA(p.notaRecomendacion)) n.cliente++;
@@ -1062,7 +1191,7 @@ function contarEjesMejora(v){
     const cap=c.captacion||{};
     ['cheques','creceSemana1','creceSemana2','creceSemana3'].forEach(k=>{ if(cap[k] && cap[k].cumple===false) n.cliente++; });
     const t=c.transporte;
-    if(t){
+    if(t && !c.transporteNoAplica){
       Object.values(t.valoraciones||{}).forEach(x=>{ if(VAL_MALA(x)) n.cliente++; });
       if(!t.entregaSinIncidencias) n.cliente++;
       if(NOTA_MALA(t.npsTransporte)) n.cliente++;
@@ -1090,16 +1219,116 @@ function contarEjesMejora(v){
   }
   return n;
 }
-function fichaIndice(v){
-  const c=v.cabecera||{};
-  return {fecha:c.fecha||'', tienda:c.tienda||'', director:c.director||'', directorTienda:c.directorTienda||'',
-    tipoVisita:c.tipoVisita||'', estado:c.estado||'pendiente', origen:c.origen||'',
-    alertas:contarEjesMejora(v), actualizado:new Date().toISOString()};
+// Las 31 pantallas del protocolo, en orden (las de Cliente Drive/Tienda/Mixto, Competencia y
+// Transporte admiten «No aplica»).
+function pantallasProtocolo(){ return [
+  ['pantalla-cj','Customer Journey'], ['pantalla-ct-drive','Cliente Drive'], ['pantalla-ct-tienda','Cliente Tienda'],
+  ['pantalla-ct-mixto','Cliente Mixto'], ['pantalla-captacion','Captación'], ['pantalla-competencia','Competencia'],
+  ['pantalla-transporte','Transporte'], ['pantalla-cartera','Cartera'], ['pantalla-sec-rupturas','Rupturas'],
+  ...FAMILIAS_LINEAL.map(f=>[`pantalla-fam-${f.key}`, f.label]), ['pantalla-sec-implantacion','Implantación comercial'],
+  ['pantalla-ges-productividad','Productividad'], ['pantalla-ges-horas','Horas'], ['pantalla-ges-indice','Índice de la tienda'],
+  ['pantalla-ges-recursos','Recursos vs afluencia'], ['pantalla-ges-horaspunta','Horas punta'], ['pantalla-ges-horasvalle','Horas valle'],
+  ['pantalla-ges-seguridad','Seguridad'], ['pantalla-ges-ventas','Ventas vs N-1'], ['pantalla-ges-precios','Precios y cheques'],
+  ['pantalla-ges-demarca','Demarca y stock'], ['pantalla-ges-workflows','Workflows'],
+]; }
+function esPantallaProtocolo(id){ return pantallasProtocolo().some(p=>p[0]===id); }
+// ¿Cuenta este campo? No si está oculto por la propia pantalla (bloques condicionales, «No aplica»)
+// o marcado como opcional. Se mira dentro de la sección aunque la sección no esté visible.
+function relevante(el, sec){
+  if(el.closest('[data-opcional]')) return false;
+  for(let n=el.parentElement; n && n!==sec; n=n.parentElement){
+    if(n.classList.contains('hidden')) return false;
+    if(n.classList.contains('cj-extra') && !n.classList.contains('show')) return false;
+    if(n.classList.contains('na-oculta') && sec.classList.contains('no-aplica')) return false;
+  }
+  return true;
 }
+// Preguntas sin contestar y ejes de mejora sin plan/fecha de una pantalla, según lo que hay en el formulario.
+function faltasPantalla(id){
+  const sec=document.getElementById(id);
+  if(!sec) return {preguntas:0, planes:0, noAplica:false};
+  const noAplica=sec.classList.contains('no-aplica');
+  let preguntas=0, planes=0;
+  if(!noAplica){
+    sec.querySelectorAll('.sino').forEach(g=>{ if(g.closest('.cj-extra') || !relevante(g,sec)) return; if(!g.querySelector('.sel-si,.sel-no')) preguntas++; });
+    sec.querySelectorAll('select, input[type=text], input[type=time]').forEach(el=>{
+      if(el.closest('.cj-extra') || !relevante(el,sec)) return;
+      if(!String(el.value||'').trim()) preguntas++;
+    });
+    sec.querySelectorAll('.cj-extra.show').forEach(x=>{
+      if(!relevante(x,sec)) return;
+      if([...x.querySelectorAll('textarea, input[type=date]')].some(e=>!String(e.value||'').trim())) planes++;
+    });
+    if(id.startsWith('pantalla-fam-')){
+      const key=id.slice('pantalla-fam-'.length);
+      const peor=Math.min(...ESCALA_FAMILIA_ATRIBUTOS.map(a=>Number(document.getElementById(`fam-${key}-${a.key}`).value)||9));
+      if(peor<=2 && (!document.getElementById(`fam-${key}-plan`).value.trim() || !document.getElementById(`fam-${key}-cuando`).value)) planes++;
+    }
+  }
+  return {preguntas, planes, noAplica};
+}
+function completitudDOM(){
+  const r={total:0, completas:0, sinContestar:[], noAplica:[], planesPendientes:0, detalle:[]};
+  pantallasProtocolo().forEach(([id,l])=>{
+    const f=faltasPantalla(id);
+    r.total++;
+    if(f.noAplica) r.noAplica.push(l);
+    if(f.noAplica || f.preguntas===0) r.completas++; else r.sinContestar.push(l);
+    r.planesPendientes+=f.planes;
+    r.detalle.push({id, l, ...f});
+  });
+  return r;
+}
+// Ejes de mejora que llevan plan de acción y fecha (los mismos rojos de la ficha que tienen «Plan/¿Cuándo?»).
+// Cada uno con su ruta: las acciones marcadas «✓ Hecha» en el Seguimiento se guardan en
+// visitas/{id}/hechas/{ruta con | en vez de /}. DEBE coincidir con accionesMejora() de _resumen.html.
+function listaAccionesMejora(v){
+  const acc=[]; const hechas=v.hechas||{};
+  const add=(ruta,plan,fecha)=>acc.push({ruta, plan:String(plan||''), fecha:String(fecha||''), hecha:!!hechas[ruta.replace(/\//g,'|')]});
+  const c=v.cliente||{}, s=v.secciones||{}, g=v.gestion||{};
+  const no=d=>d && d.cumple===false;
+  Object.entries(c.customerJourney||{}).forEach(([k,d])=>{ if(d && d.ejeMejora) add(`cliente/customerJourney/${k}`, d.que, d.cuando); });
+  const cap=c.captacion||{};
+  ['cheques','creceSemana1','creceSemana2','creceSemana3'].forEach(k=>{ if(no(cap[k])) add(`cliente/captacion/${k}`, cap[k].plan, cap[k].fecha); });
+  Object.entries(s.familias||{}).forEach(([k,d])=>{
+    if(Math.min(...['lleno','sensacionLleno','balizado','limpieza','facing','roturas','fueraDeSitio'].map(a=>Number((d||{})[a])||9))<=2) add(`secciones/familias/${k}`, d.plan, d.cuando);
+  });
+  Object.entries(s.implantacion||{}).forEach(([k,d])=>{ if(no(d)) add(`secciones/implantacion/${k}`, d.plan, d.fecha); });
+  const pr=(g.productividad||{}).productividad; if(no(pr)) add('gestion/productividad/productividad', pr.plan, pr.fecha);
+  const h=g.horas||{}; ['excesos','defecto'].forEach(k=>{ if(h[k] && h[k].cumple) add(`gestion/horas/${k}`, h[k].plan, h[k].fecha); });
+  if(g.indiceTienda && /peor/i.test(g.indiceTienda.valor||'')) add('gestion/indiceTienda', g.indiceTienda.plan, g.indiceTienda.cuando);
+  const re=(g.recursos||{}).recursosAfluencia; if(no(re)) add('gestion/recursos/recursosAfluencia', re.plan, re.fecha);
+  ['horasPunta','horasValle'].forEach(f=>['cajas','comercio','drive','transporte','logistica'].forEach(d=>{ const b=(g[f]||{})[d]; if(b && !b.cumple) add(`gestion/${f}/${d}`, b.plan, b.fecha); }));
+  ['seguridad','ventas','precios','demarcaStock'].forEach(n=>Object.entries(g[n]||{}).forEach(([k,d])=>{ if(no(d)) add(`gestion/${n}/${k}`, d.plan, d.fecha); }));
+  Object.entries(g.workflows||{}).forEach(([k,d])=>{ if(d && d.cumple===true) add(`gestion/workflows/${k}`, d.plan, d.fecha); });
+  return acc;
+}
+function accionesMejora(v){
+  const acc=listaAccionesMejora(v), hoyIso=hoy();
+  return {total:acc.length, hechas:acc.filter(a=>a.hecha).length,
+          sinPlanOFecha:acc.filter(a=>!a.hecha && (!a.plan.trim()||!a.fecha)).length,
+          vencidas:acc.filter(a=>!a.hecha && a.fecha && a.fecha<hoyIso).length};
+}
+function fichaIndice(v, comp){
+  const c=v.cabecera||{};
+  const quien=o=>(o && (o.nombre||o.email))||'';
+  const f={fecha:c.fecha||'', tienda:c.tienda||'', director:c.director||'', directorTienda:c.directorTienda||'',
+    tipoVisita:c.tipoVisita||'', estado:c.estado||'pendiente', origen:c.origen||'',
+    alertas:contarEjesMejora(v), acciones:accionesMejora(v),
+    creado:c.creado||'', registradoPor:quien(c.registradoPor), continuadoPor:quien(c.continuadoPor),
+    completado:c.completado||'', completadoPor:quien(c.completadoPor),
+    actualizado:new Date().toISOString()};
+  if(comp) f.completitud={total:comp.total, completas:comp.completas, sinContestar:comp.sinContestar,
+    noAplica:comp.noAplica, planesPendientes:comp.planesPendientes};
+  return f;
+}
+// La completitud sale del formulario: solo se recalcula si la visita es la que está abierta.
+// update() conserva la completitud anterior cuando no se recalcula.
 async function actualizarIndiceVisita(id){
   try{
     const v=(await _get(ref(`visitas/${id}`))).val();
-    if(v && v.cabecera && v.cabecera.tienda) await _set(ref(`resumenVisitas/${id}`), fichaIndice(v));
+    if(!(v && v.cabecera && v.cabecera.tienda)) return;
+    await _update(ref(`resumenVisitas/${id}`), fichaIndice(v, id===visitaActualId ? completitudDOM() : null));
   }catch(e){ console.error('[Protocolo Visita] resumen precalculado', e); }
 }
 let _tIndice=null;
@@ -1115,7 +1344,13 @@ window.recalcularResumen = async function(){
   try{
     const todas=(await _get(ref('visitas'))).val()||{};
     let n=0;
-    for(const [id,v] of Object.entries(todas)){ if(v && v.cabecera && v.cabecera.tienda){ await _set(ref(`resumenVisitas/${id}`), fichaIndice(v)); n++; } }
+    const previa=visitaActualId; visitaActualId=null;
+    for(const [id,v] of Object.entries(todas)){
+      if(!(v && v.cabecera && v.cabecera.tienda)) continue;
+      limpiarFormulario(); restaurarVisitaEnFormulario(v);
+      await _set(ref(`resumenVisitas/${id}`), fichaIndice(v, completitudDOM())); n++;
+    }
+    limpiarFormulario(); visitaActualId=previa;
     showToast(`Resumen recalculado: ${n} visita(s)`, 4000);
   }catch(e){ showToast('⚠ No se pudo recalcular: '+e.message, 5000); }
 };
@@ -1242,6 +1477,28 @@ window.iniciarVisita=async()=>{
   }
   errEl.style.display='none';
 
+  // Si la tienda ya tiene una visita sin terminar, lo normal es continuarla (evita duplicados vacíos).
+  if(!window._confirmadaNueva){
+    let pendientes=[];
+    try{
+      const snap=await _get(_query(ref('visitas'), _orderByChild('cabecera/pendienteTienda'), _equalTo(tienda)));
+      snap.forEach(ch=>{ const c=(ch.val()||{}).cabecera||{}; if(c.estado!=='completada') pendientes.push({id:ch.key, ...c}); });
+    }catch(e){ console.error('[Protocolo Visita] comprobar pendientes', e); }
+    if(pendientes.length){
+      pendientes.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+      const v=pendientes[0];
+      document.getElementById('modal-pendiente-texto').innerHTML =
+        `<b>${tienda}</b> tiene ${pendientes.length===1?'una visita sin terminar':pendientes.length+' visitas sin terminar'}. `
+        + `La más reciente: <b>${fechaES(v.fecha)}</b> · ${v.director||'?'}${v.origen==='Forms'?' (empezada en Forms)':''}.`
+        + `<br><br>Si es la misma visita, <b>continúala</b>: lo ya contestado aparece rellenado.`;
+      document.getElementById('modal-pendiente-continuar').onclick=()=>{ document.getElementById('modal-pendiente').classList.remove('show'); continuarVisitaTienda(v.id); };
+      document.getElementById('modal-pendiente-nueva').onclick=()=>{ document.getElementById('modal-pendiente').classList.remove('show'); window._confirmadaNueva=true; iniciarVisita(); };
+      document.getElementById('modal-pendiente').classList.add('show');
+      return;
+    }
+  }
+  window._confirmadaNueva=false;
+
   try{
     const nuevaRef=_push(ref('visitas'));
     visitaActualId=nuevaRef.key;
@@ -1316,8 +1573,20 @@ window.verJSON=()=>{
 
 // ══ NAVEGACIÓN GENÉRICA (con historial para "Atrás") ══
 let historialPantallas = [];
-window.irA = function(destId){
+window.irA = function(destId, saltarAviso){
   const actual = document.querySelector('main > section:not(.hidden)');
+  if(!saltarAviso && visitaActualId && actual && esPantallaProtocolo(actual.id)){
+    const f=faltasPantalla(actual.id);
+    if(f.preguntas || f.planes){
+      document.getElementById('modal-faltan-texto').innerHTML =
+        (f.preguntas ? `Quedan <b>${f.preguntas}</b> ${f.preguntas===1?'pregunta':'preguntas'} sin contestar.<br>` : '')
+        + (f.planes ? `Hay <b>${f.planes}</b> ${f.planes===1?'eje de mejora':'ejes de mejora'} sin plan de acción o sin fecha.<br>` : '')
+        + `<br>Puedes completarlo ahora o seguir y retomarlo después: la visita no se cerrará sin preguntarte.`;
+      document.getElementById('modal-faltan-seguir').onclick=()=>{ document.getElementById('modal-faltan').classList.remove('show'); window.irA(destId, true); };
+      document.getElementById('modal-faltan').classList.add('show');
+      return;
+    }
+  }
   if(actual && actual.id !== destId) historialPantallas.push(actual.id);
   document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
   document.getElementById(destId).classList.remove('hidden');
@@ -1326,7 +1595,7 @@ window.irA = function(destId){
 };
 function guardarUbicacionActual(pantallaId){
   try{
-    if(pantallaId==='pantalla-fin-gestion'){ marcarVisitaCompletada(); borrarVisitaPendienteGuardada(); return; } // protocolo completo, nada que retomar
+    if(pantallaId==='pantalla-fin-gestion'){ evaluarFinal(); return; } // decide si se cierra o queda pendiente
     if(visitaActualId && pantallaId!=='pantalla-cabecera'){
       localStorage.setItem(claveVisitaEnCurso(), JSON.stringify({visitaId: visitaActualId, pantalla: pantallaId}));
     }
@@ -1435,20 +1704,20 @@ function construirClienteTipo(cfg){
   cont.innerHTML = `
     <div class="card">
       <h2>3. ${label}</h2>
-      <p style="font-size:.78rem;color:#777;margin-top:-6px">Si no aplica este tipo de cliente en esta visita, puedes dejarlo en blanco y pulsar Continuar.</p>
-      <div class="row">
+      <label class="na-check"><input type="checkbox" id="na-ct-${key}" onchange="setNoAplica('ct-${key}', this.checked)"> No aplica en esta visita</label>
+      <div class="row na-oculta" style="margin-top:6px">
         <div><label style="margin-top:0">Hora entrada</label><input type="time" id="ct-${key}-entrada" onchange="guardarCTHora('${key}')"></div>
         <div><label style="margin-top:0">Hora salida</label><input type="time" id="ct-${key}-salida" onchange="guardarCTHora('${key}')"></div>
       </div>
     </div>
-    <div class="card">
+    <div class="card na-oculta">
       <label style="margin-top:0">¿El cliente compró?</label>
       <div class="sino">
         <button id="ct-${key}-compro-si" onclick="setCTCompro('${key}',true)">Sí compró</button>
         <button id="ct-${key}-compro-no" onclick="setCTCompro('${key}',false)">No compró</button>
       </div>
     </div>
-    <div id="ct-${key}-bloque-compro" class="hidden">
+    <div id="ct-${key}-bloque-compro" class="hidden na-oculta">
       <div class="card">
         <label style="margin-top:0">Nota de recomendación (0-10)</label>
         <select id="ct-${key}-nota" onchange="guardarCTNPS('${key}')"></select>
@@ -1462,7 +1731,7 @@ function construirClienteTipo(cfg){
         <textarea id="ct-${key}-mejorar" onblur="guardarCTNPS('${key}')"></textarea>
       </div>
     </div>
-    <div id="ct-${key}-bloque-nocompro" class="hidden">
+    <div id="ct-${key}-bloque-nocompro" class="hidden na-oculta">
       <div class="card">
         <label style="margin-top:0">¿Cuál fue el motivo principal?</label>
         <textarea id="ct-${key}-motivo" onblur="guardarCTNPS('${key}')"></textarea>
@@ -1599,7 +1868,7 @@ window.agregarCompetidor = function(){
     <div class="card">
       <h3 style="margin:0 0 10px;font-size:.9rem;color:var(--bm-blue)">Competidor ${idx+1}</h3>
       <label style="margin-top:0">Competidor visitado</label>
-      <input type="text" id="comp-${idx}-competidor" onblur="guardarCompetidor(${idx})">
+      <input type="text" id="comp-${idx}-competidor" ${idx>0?'data-opcional':''} onblur="guardarCompetidor(${idx})">
       <label>Observaciones</label>
       <textarea id="comp-${idx}-observaciones" onblur="guardarCompetidor(${idx})"></textarea>
       <label>Acciones</label>
@@ -1867,11 +2136,11 @@ construirSecuencia([
     cont.id, 'gestionProductividad', 'gestion/productividad')},
   {id:'pantalla-ges-horas', titulo:'13. Horas', render:(cont)=>renderBloqueSiNo([
     {key:'excesos', label:'¿Hay personas con excesos de horas?',
-     extraHtml:`<label style="margin-top:0">Nº de personas con excesos</label><input type="text" id="hx-excesos-personas" onblur="guardarCampo('gestion/horas/excesosPersonas',{valor:this.value})">
-     <label>Número de horas excesas</label><input type="text" id="hx-excesos-horas" onblur="guardarCampo('gestion/horas/excesosHoras',{valor:this.value})">`},
+     extraHtml:`<label style="margin-top:0">Nº de personas con excesos</label><input type="text" id="hx-excesos-personas" data-opcional onblur="guardarCampo('gestion/horas/excesosPersonas',{valor:this.value})">
+     <label>Número de horas excesas</label><input type="text" id="hx-excesos-horas" data-opcional onblur="guardarCampo('gestion/horas/excesosHoras',{valor:this.value})">`},
     {key:'defecto', label:'¿Hay personas con defectos de horas?',
-     extraHtml:`<label style="margin-top:0">Nº de personas con defectos</label><input type="text" id="hx-defecto-personas" onblur="guardarCampo('gestion/horas/defectoPersonas',{valor:this.value})">
-     <label>Número de horas pendientes</label><input type="text" id="hx-defecto-horas" onblur="guardarCampo('gestion/horas/defectoHoras',{valor:this.value})">`},
+     extraHtml:`<label style="margin-top:0">Nº de personas con defectos</label><input type="text" id="hx-defecto-personas" data-opcional onblur="guardarCampo('gestion/horas/defectoPersonas',{valor:this.value})">
+     <label>Número de horas pendientes</label><input type="text" id="hx-defecto-horas" data-opcional onblur="guardarCampo('gestion/horas/defectoHoras',{valor:this.value})">`},
   ], cont.id, 'gestionHoras', 'gestion/horas')},
   {id:'pantalla-ges-indice', titulo:'14. Índice de la tienda', render: construirIndice},
   {id:'pantalla-ges-recursos', titulo:'14. Recursos vs afluencia', render:(cont)=>renderBloqueSiNo(
@@ -1928,6 +2197,7 @@ function limpiarFormulario(){
   document.getElementById('aviso-pendientes-tienda').classList.add('hidden');
   verTodasTiendas = false;
   poblarTiendas('');
+  Object.keys(NO_APLICA).forEach(k=>aplicarNoAplicaUI(k, false));
   renderCompetencia();
 }
 window.nuevaVisita=()=>{
